@@ -1,0 +1,30 @@
+{
+    "manifest_version": 3,
+    "name": "US Visa",
+    "version": "1.0",
+    "description": "Check available US visa appointment dates.",
+    "permissions": [
+        "scripting",
+        "activeTab"
+    ],
+    "host_permissions": [
+        "https://ais.usvisa-info.com/*"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Check Visa Dates"
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://ais.usvisa-info.com/*"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ]
+}
