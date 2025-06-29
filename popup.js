@@ -36,10 +36,6 @@ function setupEventListeners() {
     .getElementById("cancelConfigBtn")
     .addEventListener("click", hideConfig);
   document.getElementById("resetBtn").addEventListener("click", resetExtension);
-  document.getElementById("goToLoginBtn").addEventListener("click", goToLogin);
-  document
-    .getElementById("goToScheduleBtn")
-    .addEventListener("click", goToSchedule);
 
   // 添加实时保存功能
   setupAutoSave();
@@ -119,6 +115,8 @@ function updateUI(status) {
     else if (status.currentPage.isDashboard) pageStatus = "仪表板";
     else if (status.currentPage.isAppointment) pageStatus = "预约页面";
     else if (status.currentPage.isConfirmation) pageStatus = "确认页面";
+    else if (status.currentPage.isAddressPage) pageStatus = "地址页面";
+    else if (status.currentPage.isLoggedOut) pageStatus = "首页";
   }
 
   document.getElementById("monitorStatus").textContent = pageStatus;
@@ -269,6 +267,7 @@ async function saveConfig() {
       __pw: password,
       __il: center,
       __vt: visaType,
+      __autoFlow: true, // 标记需要自动流程
     });
 
     // 尝试发送给content script（如果可用）
@@ -291,13 +290,16 @@ async function saveConfig() {
       }
     }
 
-    showNotification("配置已保存", "用户配置已更新");
+    showNotification("配置已保存", "正在自动引导到登录页面...");
     hideConfig();
 
     // 更新显示的默认中心
     if (center) {
       document.getElementById("locationNumb").value = center;
     }
+
+    // 启动自动导航流程
+    await startAutoNavigationFlow(visaType);
   } catch (error) {
     console.error("保存配置失败:", error);
     alert("保存配置失败: " + error.message);
@@ -449,4 +451,61 @@ async function resetExtension() {
       alert("重置失败: " + error.message);
     }
   }
+}
+
+// 启动自动导航流程
+async function startAutoNavigationFlow(visaType) {
+  try {
+    const storage = await chrome.storage.local.get(["__un", "__pw"]);
+
+    if (!storage.__un || !storage.__pw) {
+      showNotification("配置错误", "请先设置用户名和密码");
+      return;
+    }
+
+    // 根据签证类型构建登录URL
+    const loginUrl = `https://ais.usvisa-info.com/en-ca/${visaType}/users/sign_in`;
+
+    showNotification("开始自动导航", "正在打开登录页面...");
+
+    // 打开登录页面
+    chrome.tabs.create({ url: loginUrl }, (tab) => {
+      if (tab) {
+        // 监听标签页更新，跟踪导航流程
+        trackNavigationProgress(tab.id, visaType);
+      }
+    });
+  } catch (error) {
+    console.error("自动导航失败:", error);
+    showNotification("导航失败", error.message);
+  }
+}
+
+// 跟踪导航进度
+function trackNavigationProgress(tabId, visaType) {
+  const checkInterval = setInterval(async () => {
+    try {
+      const tab = await chrome.tabs.get(tabId);
+
+      if (!tab.url) return;
+
+      // 检查页面状态
+      if (tab.url.includes("/users/sign_in")) {
+        showNotification("导航状态", "已到达登录页面，正在自动登录...");
+      } else if (tab.url.includes("/groups/")) {
+        showNotification("导航状态", "已登录，正在获取预约信息...");
+      } else if (tab.url.includes("/appointment")) {
+        showNotification("导航状态", "已到达预约页面，准备开始监控");
+        clearInterval(checkInterval);
+      }
+    } catch (error) {
+      console.log("标签页可能已关闭:", error);
+      clearInterval(checkInterval);
+    }
+  }, 2000);
+
+  // 5分钟后停止跟踪
+  setTimeout(() => {
+    clearInterval(checkInterval);
+  }, 300000);
 }

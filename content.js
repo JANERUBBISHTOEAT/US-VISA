@@ -64,6 +64,9 @@
   const isConfirmation = !!page.match(
     /^\/[a-z]{2}-[a-z]{2}\/(n|)iv\/schedule\/\d{1,}\/appointment\/instructions$/
   );
+  const isAddressPage = !!page.match(
+    /^\/[a-z]{2}-[a-z]{2}\/(n|)iv\/schedule\/\d{1,}\/addresses/
+  );
 
   // 从URL判断签证类型
   const currentVisaType = page.match(/\/(niv|iv)\//)?.[1] || "niv";
@@ -291,7 +294,64 @@
         );
 
         for (const element of appointmentElements) {
-          // 查找日期文本
+          // 更精确的日期时间匹配，支持 "29 April, 2026, 10:15" 格式
+          const fullText = element.textContent.trim();
+          console.log("检查预约元素文本:", fullText);
+
+          // 匹配 "Consular Appointment: 29 April, 2026, 10:15 Vancouver local time"
+          const appointmentMatch = fullText.match(
+            /Consular Appointment:\s*(.+?)\s+(?:Vancouver|local time)/i
+          );
+          if (appointmentMatch) {
+            const appointmentInfo = appointmentMatch[1].trim();
+
+            // 解析日期时间 "29 April, 2026, 10:15"
+            const dateTimeMatch = appointmentInfo.match(
+              /(\d{1,2})\s+(\w+),\s+(\d{4}),\s+(\d{1,2}:\d{2})/
+            );
+            if (dateTimeMatch) {
+              const [, day, monthName, year, time] = dateTimeMatch;
+
+              // 月份名称转数字
+              const monthNames = [
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December",
+              ];
+              const monthIndex = monthNames.findIndex(
+                (m) => m.toLowerCase() === monthName.toLowerCase()
+              );
+
+              if (monthIndex !== -1) {
+                const formattedDate = `${year}-${String(
+                  monthIndex + 1
+                ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+                console.log("解析到预约信息:", {
+                  date: formattedDate,
+                  time: time,
+                  fullText: appointmentInfo,
+                });
+
+                return {
+                  date: formattedDate,
+                  time: time,
+                  fullText: appointmentInfo,
+                };
+              }
+            }
+          }
+
+          // 备用匹配方式 - 简单的日期时间匹配
           const dateText = element.textContent.match(
             /(\w+\s+\d{1,2},\s+\d{4})/
           );
@@ -299,20 +359,22 @@
 
           if (dateText) {
             const appointmentDate = new Date(dateText[1]);
-            const formattedDate =
-              appointmentDate.getFullYear() +
-              "-" +
-              String(appointmentDate.getMonth() + 1).padStart(2, "0") +
-              "-" +
-              String(appointmentDate.getDate()).padStart(2, "0");
+            if (!isNaN(appointmentDate.getTime())) {
+              const formattedDate =
+                appointmentDate.getFullYear() +
+                "-" +
+                String(appointmentDate.getMonth() + 1).padStart(2, "0") +
+                "-" +
+                String(appointmentDate.getDate()).padStart(2, "0");
 
-            const timeStr = timeText ? timeText[1] : "";
+              const timeStr = timeText ? timeText[1] : "";
 
-            return {
-              date: formattedDate,
-              time: timeStr,
-              fullText: dateText[1] + (timeStr ? " " + timeStr : ""),
-            };
+              return {
+                date: formattedDate,
+                time: timeStr,
+                fullText: dateText[1] + (timeStr ? " " + timeStr : ""),
+              };
+            }
           }
         }
       }
@@ -355,6 +417,7 @@
         __af: appointmentInfo.fullText,
       });
 
+      console.log(`当前预约信息: ${JSON.stringify(appointmentInfo)}`);
       toast(`当前预约: ${appointmentInfo.fullText}`, "info");
     }
   }
@@ -453,12 +516,23 @@
   async function init() {
     await loadConfiguration();
 
+    console.log("页面初始化 - 当前页面类型:", {
+      isLoggedOut,
+      isSignIn,
+      isDashboard,
+      isAppointment,
+      isAddressPage,
+      isConfirmation,
+      currentPath: page,
+    });
+
     // 更新预约信息
     updateAppointmentInfo();
 
     // 处理不同页面类型
     if (isLoggedOut) {
       // 在首页，点击登录链接
+      toast("检测到首页，寻找登录链接...", "info");
       const signInLink = document.querySelector(
         ".homeSelectionsContainer a[href*='/sign_in']"
       );
@@ -471,28 +545,41 @@
 
     if (isSignIn) {
       // 处理登录页面
+      toast("检测到登录页面，开始自动登录...", "info");
       await handleSignInPage();
       return;
     }
 
     if (isDashboard) {
       // 处理仪表板页面，选择预约
+      toast("检测到仪表板页面，获取预约信息...", "info");
       await handleDashboardPage();
       return;
     }
 
     if (isAppointment) {
       // 处理预约页面，这是主要的监控页面
+      toast("检测到预约页面，准备监控...", "info");
       await handleAppointmentPage();
+      return;
+    }
+
+    if (isAddressPage) {
+      // 处理地址页面，直接跳转到预约页面
+      toast("检测到地址页面，跳转到预约页面...", "info");
+      await handleAddressPage();
       return;
     }
 
     if (isConfirmation) {
       // 预约确认页面，等待后跳转
+      toast("检测到确认页面，等待后返回仪表板...", "info");
       await delay(10000);
       location.href = page.replace(/schedule.*/, "");
       return;
     }
+
+    toast("未识别的页面类型，等待手动操作...", "warning");
   }
 
   // 处理登录页面
@@ -530,6 +617,9 @@
   async function handleDashboardPage() {
     await delay(2000);
 
+    // 首先获取当前预约信息
+    updateAppointmentInfo();
+
     // 查找预约链接
     const appointmentLinks = document.querySelectorAll(
       "p.consular-appt [href], .ready_to_schedule p.delivery [href]"
@@ -549,35 +639,44 @@
       selectedLink = Array.from(appointmentLinks).find((link) =>
         link.href.includes($appid)
       );
+    } else {
+      // 选择第一个预约链接
+      selectedLink = appointmentLinks[0];
+      $appid = selectedLink.href.replace(/\D/g, "");
     }
 
     if (selectedLink) {
       await chrome.storage.local.set({ __id: $appid });
 
-      // 获取预约日期
-      const appointmentElement =
-        selectedLink.closest("tr") || selectedLink.closest(".panel");
-      if (appointmentElement) {
-        const dateMatch = appointmentElement.textContent.match(
-          /\d{1,2} \w{1,}, \d{4}/
-        );
-        if (dateMatch) {
-          const apptDate = new Date(dateMatch[0]);
-          $apptDate =
-            apptDate.getFullYear() +
-            "-" +
-            String(apptDate.getMonth() + 1).padStart(2, "0") +
-            "-" +
-            String(apptDate.getDate()).padStart(2, "0");
+      // 获取预约日期信息（从当前页面解析）
+      const appointmentInfo = getCurrentAppointmentInfo();
+      if (appointmentInfo) {
+        $apptDate = appointmentInfo.date;
+        await chrome.storage.local.set({
+          __ad: appointmentInfo.date,
+          __at: appointmentInfo.time,
+          __af: appointmentInfo.fullText,
+        });
 
-          await chrome.storage.local.set({ __ad: $apptDate });
-        }
+        toast(`已获取当前预约信息: ${appointmentInfo.fullText}`, "success");
       }
 
-      // 跳转到预约页面
-      const appointmentUrl = selectedLink
-        .getAttribute("href")
-        .replace("/addresses/delivery", "/appointment");
+      // 直接跳转到预约调度页面，而不是地址页面
+      let appointmentUrl = selectedLink.getAttribute("href");
+
+      // 如果链接指向地址页面，改为指向预约页面
+      if (appointmentUrl.includes("/addresses/")) {
+        appointmentUrl = appointmentUrl
+          .replace("/addresses/delivery", "/appointment")
+          .replace("/addresses/consulate", "/appointment");
+      }
+
+      // 确保链接指向appointment页面
+      if (!appointmentUrl.includes("/appointment")) {
+        appointmentUrl = appointmentUrl.replace(/\/[^\/]*$/, "/appointment");
+      }
+
+      toast(`正在跳转到预约页面: ${appointmentUrl}`, "info");
       location.href = appointmentUrl;
     }
   }
@@ -642,6 +741,19 @@
     }
   }
 
+  // 处理地址页面
+  async function handleAddressPage() {
+    toast("检测到地址页面，正在跳转到预约页面...", "info");
+    await delay(1000);
+
+    // 从当前URL构建预约页面URL
+    const appointmentUrl = location.pathname.replace(
+      /\/addresses\/[^\/]*$/,
+      "/appointment"
+    );
+    location.href = appointmentUrl;
+  }
+
   // 消息监听
   chrome.runtime.onMessage.addListener(function (
     request,
@@ -679,6 +791,8 @@
           isDashboard,
           isAppointment,
           isConfirmation,
+          isAddressPage,
+          isLoggedOut,
         },
       });
     }
@@ -712,4 +826,28 @@
   } else {
     init();
   }
+
+  // 测试预约信息解析（开发阶段使用）
+  function testAppointmentParsing() {
+    // 模拟HTML结构进行测试
+    const testHTML = `
+      <p class="consular-appt">
+        <strong>Consular Appointment</strong>
+        <span>:</span>
+        " 29 April, 2026, 10:15 Vancouver local time at Vancouver — "
+      </p>
+    `;
+
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = testHTML;
+    document.body.appendChild(tempDiv);
+
+    const result = getCurrentAppointmentInfo();
+    console.log("测试解析结果:", result);
+
+    document.body.removeChild(tempDiv);
+    return result;
+  }
+
+  // 在开发模式下可以调用 testAppointmentParsing() 进行测试
 })(location.pathname);
