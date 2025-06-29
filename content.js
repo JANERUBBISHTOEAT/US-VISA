@@ -699,6 +699,12 @@
       return;
     }
 
+    // 获取预约中心选项
+    const centers = getAppointmentCenters();
+    if (centers && centers.length > 0) {
+      toast(`已获取 ${centers.length} 个预约中心选项`, "success");
+    }
+
     // 设置预约中心
     if (!$apptCenter) {
       const centerSelect = document.getElementById(
@@ -754,6 +760,46 @@
     location.href = appointmentUrl;
   }
 
+  // 获取预约中心选项
+  function getAppointmentCenters() {
+    try {
+      const centerSelect = document.getElementById(
+        "appointments_consulate_appointment_facility_id"
+      );
+      if (!centerSelect) {
+        console.log("未找到预约中心选择器");
+        return null;
+      }
+
+      const centers = [];
+      const options = centerSelect.querySelectorAll("option");
+
+      options.forEach((option) => {
+        const value = option.value;
+        const text = option.textContent.trim();
+        const isSelected = option.selected;
+
+        if (value && text) {
+          centers.push({
+            value: value,
+            text: text,
+            selected: isSelected,
+          });
+        }
+      });
+
+      console.log("获取到预约中心选项:", centers);
+
+      // 保存到storage供popup使用
+      chrome.storage.local.set({ __centers: centers });
+
+      return centers;
+    } catch (error) {
+      console.error("获取预约中心选项失败:", error);
+      return null;
+    }
+  }
+
   // 消息监听
   chrome.runtime.onMessage.addListener(function (
     request,
@@ -795,6 +841,11 @@
           isLoggedOut,
         },
       });
+    }
+
+    if (request.action === "get_centers") {
+      const centers = getAppointmentCenters();
+      return sendResponse({ centers: centers });
     }
 
     if (request.action === "set_config") {

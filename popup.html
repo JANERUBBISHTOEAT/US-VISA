@@ -158,9 +158,22 @@
         align-items: end;
       }
 
+      .input-row select {
+        flex: 1;
+      }
+
       .input-row .form-group {
         flex: 1;
         margin-bottom: 0;
+      }
+
+      .btn-refresh {
+        padding: 8px 12px;
+        margin: auto;
+        white-space: nowrap;
+        min-width: auto;
+        width: auto;
+        flex-shrink: 0;
       }
 
       .tips {
@@ -193,8 +206,15 @@
       <h3>🇺🇸 美签预约监控</h3>
 
       <div class="form-group">
-        <label for="locationNumb">预约中心编号</label>
-        <input type="text" id="locationNumb" placeholder="如: 95 (Vancouver)" />
+        <label for="locationSelect">预约中心</label>
+        <div class="input-row">
+          <select id="locationSelect">
+            <option value="">请选择预约中心...</option>
+          </select>
+          <button id="refreshCentersBtn" class="btn-secondary btn-refresh">
+            刷新
+          </button>
+        </div>
       </div>
 
       <div class="form-group">
@@ -218,7 +238,7 @@
           <span id="scheduleDisplay" class="info-value">-</span>
         </div>
         <div class="info-item">
-          <span class="info-label">地点 ID</span>
+          <span class="info-label">地点</span>
           <span id="locationDisplay" class="info-value">-</span>
         </div>
         <div class="info-item">
@@ -234,8 +254,9 @@
       <div class="tips">
         💡 <strong>使用提示:</strong><br />
         1. 首先在设置中配置账号信息<br />
-        2. 在预约页面启动监控<br />
-        3. 发现更早预约时会自动通知
+        2. 选择预约中心后启动监控<br />
+        3. 发现更早预约时会自动通知<br />
+        💡 如未看到预约中心选项，请点击"刷新"按钮
       </div>
     </div>
 
@@ -265,10 +286,6 @@
         <input type="password" id="passwordInput" placeholder="输入密码" />
       </div>
 
-      <div class="form-group">
-        <label for="centerInput">默认预约中心</label>
-        <input type="text" id="centerInput" placeholder="如: 95" />
-      </div>
       <div class="button-row">
         <button id="saveConfigBtn" class="btn-success">保存设置</button>
         <button id="cancelConfigBtn" class="btn-secondary">取消</button>

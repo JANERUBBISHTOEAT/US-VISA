@@ -6,18 +6,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadCurrentStatus();
   await loadDefaultSettings();
   setupEventListeners();
+
+  // 尝试加载预约中心选项
+  await refreshAppointmentCenters();
 });
 
 // 加载默认设置
 async function loadDefaultSettings() {
   try {
-    const storage = await chrome.storage.local.get(["__il", "__vt"]);
-    if (storage.__il) {
-      document.getElementById("locationNumb").value = storage.__il;
-    }
+    const storage = await chrome.storage.local.get([
+      "__il",
+      "__vt",
+      "__centers",
+    ]);
+
     if (storage.__vt) {
       document.getElementById("visaTypeSelect").value = storage.__vt;
     }
+
+    // 加载预约中心选项
+    await loadAppointmentCenters(storage.__centers, storage.__il);
   } catch (error) {
     console.error("加载默认设置失败:", error);
   }
@@ -36,6 +44,25 @@ function setupEventListeners() {
     .getElementById("cancelConfigBtn")
     .addEventListener("click", hideConfig);
   document.getElementById("resetBtn").addEventListener("click", resetExtension);
+
+  // 预约中心刷新按钮
+  document
+    .getElementById("refreshCentersBtn")
+    .addEventListener("click", refreshAppointmentCenters);
+
+  // 预约中心选择变化事件
+  document
+    .getElementById("locationSelect")
+    .addEventListener("change", function (e) {
+      const selectedValue = e.target.value;
+      const selectedText = e.target.options[e.target.selectedIndex].text;
+
+      if (selectedValue) {
+        // 自动保存选择
+        chrome.storage.local.set({ __il: selectedValue });
+        console.log("已选择预约中心:", selectedText);
+      }
+    });
 
   // 添加实时保存功能
   setupAutoSave();
@@ -103,8 +130,24 @@ function updateUI(status) {
     : "开始监控";
   document.getElementById("scheduleDisplay").textContent =
     status.scheduleId || "-";
-  document.getElementById("locationDisplay").textContent =
-    status.apptCenter || "-";
+
+  // 显示预约中心信息
+  if (status.apptCenter) {
+    // 尝试找到对应的中心名称
+    const locationSelect = document.getElementById("locationSelect");
+    const option = Array.from(locationSelect.options).find(
+      (opt) => opt.value === status.apptCenter
+    );
+    if (option) {
+      document.getElementById("locationDisplay").textContent = option.text;
+    } else {
+      document.getElementById("locationDisplay").textContent =
+        status.apptCenter;
+    }
+  } else {
+    document.getElementById("locationDisplay").textContent = "-";
+  }
+
   document.getElementById("currentDateDisplay").textContent =
     status.apptDate || "-";
 
@@ -144,20 +187,20 @@ async function toggleMonitoring() {
   try {
     if (!isRunning) {
       // 启动监控
-      const locationNum = document.getElementById("locationNumb").value.trim();
+      const locationValue = document.getElementById("locationSelect").value;
       const intervalMinutes = parseInt(
         document.getElementById("intervalSelect").value
       );
 
-      if (!locationNum || isNaN(locationNum)) {
-        alert("请输入有效的地点编号！");
+      if (!locationValue) {
+        alert("请选择预约中心！");
         return;
       }
 
       try {
         const response = await chrome.tabs.sendMessage(currentTab.id, {
           action: "start_monitoring",
-          center: locationNum,
+          center: locationValue,
           interval: intervalMinutes * 60 * 1000,
         });
 
@@ -165,11 +208,17 @@ async function toggleMonitoring() {
           isRunning = true;
           document.getElementById("status").textContent = "状态：监控中...";
           document.getElementById("toggleBtn").textContent = "停止监控";
-          document.getElementById("locationDisplay").textContent = locationNum;
+
+          // 显示选中的预约中心名称
+          const locationText =
+            document.getElementById("locationSelect").options[
+              document.getElementById("locationSelect").selectedIndex
+            ].text;
+          document.getElementById("locationDisplay").textContent = locationText;
 
           showNotification(
             "监控已启动",
-            `正在监控地点 ${locationNum}，检查间隔 ${intervalMinutes} 分钟`
+            `正在监控 ${locationText}，检查间隔 ${intervalMinutes} 分钟`
           );
         } else {
           alert("启动监控失败，请确保在正确的页面");
@@ -224,21 +273,13 @@ function hideConfig() {
 // 加载保存的配置
 async function loadSavedConfig() {
   try {
-    const storage = await chrome.storage.local.get([
-      "__un",
-      "__pw",
-      "__il",
-      "__vt",
-    ]);
+    const storage = await chrome.storage.local.get(["__un", "__pw", "__vt"]);
 
     if (storage.__un) {
       document.getElementById("usernameInput").value = storage.__un;
     }
     if (storage.__pw) {
       document.getElementById("passwordInput").value = storage.__pw;
-    }
-    if (storage.__il) {
-      document.getElementById("centerInput").value = storage.__il;
     }
     if (storage.__vt) {
       document.getElementById("visaTypeSelect").value = storage.__vt;
@@ -252,7 +293,6 @@ async function loadSavedConfig() {
 async function saveConfig() {
   const username = document.getElementById("usernameInput").value.trim();
   const password = document.getElementById("passwordInput").value.trim();
-  const center = document.getElementById("centerInput").value.trim();
   const visaType = document.getElementById("visaTypeSelect").value;
 
   if (!username || !password) {
@@ -265,7 +305,6 @@ async function saveConfig() {
     await chrome.storage.local.set({
       __un: username,
       __pw: password,
-      __il: center,
       __vt: visaType,
       __autoFlow: true, // 标记需要自动流程
     });
@@ -281,7 +320,6 @@ async function saveConfig() {
           action: "set_config",
           username: username,
           password: password,
-          center: center,
           visaType: visaType,
         });
         console.log("配置已发送给content script");
@@ -293,11 +331,6 @@ async function saveConfig() {
     showNotification("配置已保存", "正在自动引导到登录页面...");
     hideConfig();
 
-    // 更新显示的默认中心
-    if (center) {
-      document.getElementById("locationNumb").value = center;
-    }
-
     // 启动自动导航流程
     await startAutoNavigationFlow(visaType);
   } catch (error) {
@@ -308,12 +341,7 @@ async function saveConfig() {
 
 // 设置自动保存功能
 function setupAutoSave() {
-  const inputs = [
-    "usernameInput",
-    "passwordInput",
-    "centerInput",
-    "visaTypeSelect",
-  ];
+  const inputs = ["usernameInput", "passwordInput", "visaTypeSelect"];
 
   inputs.forEach((inputId) => {
     const input = document.getElementById(inputId);
@@ -342,13 +370,11 @@ async function autoSaveConfig() {
   try {
     const username = document.getElementById("usernameInput").value.trim();
     const password = document.getElementById("passwordInput").value.trim();
-    const center = document.getElementById("centerInput").value.trim();
     const visaType = document.getElementById("visaTypeSelect").value;
 
     await chrome.storage.local.set({
       __un: username,
       __pw: password,
-      __il: center,
       __vt: visaType,
     });
 
@@ -432,11 +458,13 @@ async function resetExtension() {
       // 重新加载状态
       isRunning = false;
       document.getElementById("status").textContent = "状态：未启动";
-      document.getElementById("toggleBtn").textContent = "开始监控"; // 清除表单
-      document.getElementById("locationNumb").value = "";
+      document.getElementById("toggleBtn").textContent = "开始监控";
+
+      // 清除表单
+      document.getElementById("locationSelect").innerHTML =
+        '<option value="">请选择预约中心...</option>';
       document.getElementById("usernameInput").value = "";
       document.getElementById("passwordInput").value = "";
-      document.getElementById("centerInput").value = "";
       document.getElementById("visaTypeSelect").value = "niv";
 
       // 清除显示信息
@@ -450,6 +478,95 @@ async function resetExtension() {
       console.error("重置失败:", error);
       alert("重置失败: " + error.message);
     }
+  }
+}
+
+// 加载预约中心选项
+async function loadAppointmentCenters(savedCenters, selectedValue) {
+  const locationSelect = document.getElementById("locationSelect");
+
+  // 清空现有选项（除了默认选项）
+  locationSelect.innerHTML = '<option value="">请选择预约中心...</option>';
+
+  let centers = savedCenters;
+
+  // 如果没有保存的中心数据，尝试从当前标签页获取
+  if (
+    !centers &&
+    currentTab &&
+    currentTab.url &&
+    currentTab.url.includes("ais.usvisa-info.com")
+  ) {
+    try {
+      const response = await chrome.tabs.sendMessage(currentTab.id, {
+        action: "get_centers",
+      });
+
+      if (response && response.centers) {
+        centers = response.centers;
+        // 保存到storage
+        await chrome.storage.local.set({ __centers: centers });
+      }
+    } catch (error) {
+      console.log("无法从页面获取预约中心选项:", error);
+    }
+  }
+
+  // 填充选项
+  if (centers && centers.length > 0) {
+    centers.forEach((center) => {
+      const option = document.createElement("option");
+      option.value = center.value;
+      option.textContent = `${center.text} (${center.value})`;
+
+      if (selectedValue && selectedValue === center.value) {
+        option.selected = true;
+      } else if (center.selected) {
+        option.selected = true;
+      }
+
+      locationSelect.appendChild(option);
+    });
+
+    console.log(`已加载 ${centers.length} 个预约中心选项`);
+  } else {
+    // 如果没有数据，添加提示选项
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "请先访问预约页面获取中心选项";
+    option.disabled = true;
+    locationSelect.appendChild(option);
+  }
+}
+
+// 刷新预约中心选项
+async function refreshAppointmentCenters() {
+  if (
+    currentTab &&
+    currentTab.url &&
+    currentTab.url.includes("ais.usvisa-info.com")
+  ) {
+    try {
+      const response = await chrome.tabs.sendMessage(currentTab.id, {
+        action: "get_centers",
+      });
+
+      if (response && response.centers) {
+        const storage = await chrome.storage.local.get(["__il"]);
+        await loadAppointmentCenters(response.centers, storage.__il);
+        showNotification(
+          "预约中心选项已更新",
+          `获取到 ${response.centers.length} 个预约中心`
+        );
+      } else {
+        showNotification("更新失败", "当前页面没有预约中心选项");
+      }
+    } catch (error) {
+      console.error("刷新预约中心选项失败:", error);
+      showNotification("更新失败", "无法连接到页面");
+    }
+  } else {
+    showNotification("更新失败", "请先在美签预约页面上刷新");
   }
 }
 
