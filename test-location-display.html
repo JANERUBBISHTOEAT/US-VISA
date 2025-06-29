@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>地点显示测试</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .test-case {
+        border: 1px solid #ddd;
+        margin: 10px 0;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .test-case h3 {
+        margin-top: 0;
+        color: #2c3e50;
+      }
+      .mock-info-item {
+        background: #ecf0f1;
+        padding: 8px;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 12px;
+        margin: 10px 0;
+      }
+      .mock-info-label {
+        font-weight: 600;
+        color: #2c3e50;
+        display: block;
+      }
+      .mock-info-value {
+        color: #3498db;
+        font-weight: 500;
+        word-break: break-word;
+        line-height: 1.2;
+        font-size: 11px;
+      }
+      .before {
+        background-color: #f8d7da;
+      }
+      .after {
+        background-color: #d4edda;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🏢 地点显示优化测试</h1>
+
+    <div class="test-case before">
+      <h3>❌ 修复前的问题</h3>
+      <p><strong>问题描述：</strong></p>
+      <ul>
+        <li>有时显示 "94"，有时显示 "Toronto(94)"</li>
+        <li>多选时显示不全</li>
+        <li>格式不一致</li>
+      </ul>
+
+      <div class="mock-info-item">
+        <span class="mock-info-label">地点</span>
+        <span class="mock-info-value">94</span>
+      </div>
+
+      <div class="mock-info-item">
+        <span class="mock-info-label">地点</span>
+        <span class="mock-info-value">Toronto (94), Van...</span>
+      </div>
+    </div>
+
+    <div class="test-case after">
+      <h3>✅ 修复后的改进</h3>
+      <p><strong>解决方案：</strong></p>
+      <ul>
+        <li>统一格式为 "名称(ID)" 形式</li>
+        <li>完整显示多个选择的中心</li>
+        <li>智能处理长文本</li>
+        <li>添加 tooltip 显示完整信息</li>
+      </ul>
+
+      <div class="mock-info-item">
+        <span class="mock-info-label">地点</span>
+        <span class="mock-info-value">Toronto(94)</span>
+      </div>
+
+      <div class="mock-info-item">
+        <span class="mock-info-label">地点</span>
+        <span class="mock-info-value">Toronto(94), Vancouver(95)</span>
+      </div>
+
+      <div class="mock-info-item">
+        <span class="mock-info-label">地点</span>
+        <span class="mock-info-value"
+          >Toronto(94), Vancouver(95), Ottawa(96)</span
+        >
+      </div>
+    </div>
+
+    <div class="test-case">
+      <h3>🔧 技术改进</h3>
+      <p><strong>主要修复：</strong></p>
+      <ol>
+        <li>
+          <strong>新增 getCenterDisplayName() 函数</strong> -
+          统一处理地点名称格式
+        </li>
+        <li>
+          <strong>新增 updateLocationDisplay() 函数</strong> -
+          专门处理地点显示逻辑
+        </li>
+        <li><strong>改进 CSS 样式</strong> - 更好的文本换行和显示效果</li>
+        <li><strong>即时更新</strong> - 选择中心时立即更新显示</li>
+        <li><strong>智能回退</strong> - 即使找不到选项也能友好显示</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>📝 测试步骤</h3>
+      <ol>
+        <li>重新加载扩展</li>
+        <li>打开美签网站并进入预约页面</li>
+        <li>在扩展弹窗中选择多个预约中心（如94, 95）</li>
+        <li>查看地点显示是否为 "Toronto(94), Vancouver(95)" 格式</li>
+        <li>切换单个和多个选择，确认显示正确</li>
+      </ol>
+    </div>
+  </body>
+</html>

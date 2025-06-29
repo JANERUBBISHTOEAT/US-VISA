@@ -146,6 +146,9 @@ button {
 .info-value {
   color: #3498db;
   font-weight: 500;
+  word-break: break-word;
+  line-height: 1.2;
+  font-size: 11px;
 }
 
 .input-row {

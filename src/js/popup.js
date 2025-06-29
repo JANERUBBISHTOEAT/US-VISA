@@ -235,6 +235,9 @@ function setupEventListeners() {
       }
 
       console.log("自动提交设置:", autoSubmit ? "已开启" : "已关闭");
+
+      // 立即更新状态显示
+      await loadCurrentStatus();
     });
 
   // 预约中心选择变化事件
@@ -256,6 +259,13 @@ function setupEventListeners() {
           __selectedCenters: selectedTexts.join(", "),
         });
         console.log("已选择预约中心:", selectedTexts.join(", "));
+
+        // 立即更新地点显示
+        const mockStatus = {
+          apptCenter: selectedValues.join(","),
+          apptCenters: selectedValues,
+        };
+        updateLocationDisplay(mockStatus);
       }
     });
 
@@ -278,6 +288,9 @@ async function loadCurrentStatus() {
         ? i18n.t("status_messages.visit_website")
         : "状态：请先打开美签网站";
       document.getElementById("status").textContent = statusText;
+
+      // 即使不在美签网站，也加载本地存储的基本信息
+      await loadBasicInfoFromStorage();
       return;
     }
 
@@ -294,6 +307,9 @@ async function loadCurrentStatus() {
           ? i18n.t("status_messages.waiting")
           : "状态：等待页面加载...";
         document.getElementById("status").textContent = statusText;
+
+        // 尝试从本地存储加载基本信息
+        await loadBasicInfoFromStorage();
       }
     } catch (msgError) {
       console.log("无法连接到content script，可能页面还在加载");
@@ -313,6 +329,8 @@ async function loadCurrentStatus() {
           }
         } catch (retryError) {
           console.log("重试连接失败:", retryError);
+          // 如果还是失败，尝试从本地存储加载基本信息
+          await loadBasicInfoFromStorage();
         }
       }, 2000);
     }
@@ -350,48 +368,8 @@ function updateUI(status) {
   document.getElementById("scheduleDisplay").textContent =
     status.scheduleId || "-";
 
-  // 显示预约中心信息
-  if (status.apptCenters && status.apptCenters.length > 0) {
-    // 多中心模式 - 尝试找到对应的中心名称
-    const locationSelect = document.getElementById("locationSelect");
-    const centerNames = status.apptCenters.map((centerValue) => {
-      const option = Array.from(locationSelect.options).find(
-        (opt) => opt.value === centerValue
-      );
-      return option ? option.text : centerValue;
-    });
-    document.getElementById("locationDisplay").textContent =
-      centerNames.join(", ");
-  } else if (status.apptCenter) {
-    // 检查是否为逗号分隔的多中心字符串
-    const locationSelect = document.getElementById("locationSelect");
-
-    if (status.apptCenter.includes(",")) {
-      // 多中心模式 - 解析逗号分隔的字符串
-      const centerValues = status.apptCenter.split(",").map((v) => v.trim());
-      const centerNames = centerValues.map((centerValue) => {
-        const option = Array.from(locationSelect.options).find(
-          (opt) => opt.value === centerValue
-        );
-        return option ? option.text : centerValue;
-      });
-      document.getElementById("locationDisplay").textContent =
-        centerNames.join(", ");
-    } else {
-      // 单中心模式
-      const option = Array.from(locationSelect.options).find(
-        (opt) => opt.value === status.apptCenter
-      );
-      if (option) {
-        document.getElementById("locationDisplay").textContent = option.text;
-      } else {
-        document.getElementById("locationDisplay").textContent =
-          status.apptCenter;
-      }
-    }
-  } else {
-    document.getElementById("locationDisplay").textContent = "-";
-  }
+  // 使用新的地点显示函数
+  updateLocationDisplay(status);
 
   document.getElementById("currentDateDisplay").textContent =
     status.apptDate || "-";
@@ -935,4 +913,166 @@ function trackNavigationProgress(tabId, visaType) {
   setTimeout(() => {
     clearInterval(checkInterval);
   }, 300000);
+}
+
+// 从本地存储加载基本信息
+async function loadBasicInfoFromStorage() {
+  try {
+    const storage = await chrome.storage.local.get([
+      "__id", // scheduleId
+      "__il", // appointment center
+      "__al", // centers array
+      "__as", // auto submit
+      "__ad", // appointment date
+      "__active", // monitoring status
+    ]);
+
+    // 更新预约ID显示
+    document.getElementById("scheduleDisplay").textContent =
+      storage.__id || "-";
+
+    // 更新自动提交状态
+    const autoSubmitStatus = isI18nReady
+      ? storage.__as
+        ? i18n.t("info_values.enabled")
+        : i18n.t("info_values.disabled")
+      : storage.__as
+      ? "开启"
+      : "关闭";
+    document.getElementById("autoSubmitStatus").textContent = autoSubmitStatus;
+    document.getElementById("autoSubmitStatus").style.color = storage.__as
+      ? "#e74c3c"
+      : "#27ae60";
+
+    // 更新当前预约日期
+    if (storage.__ad) {
+      document.getElementById("currentDateDisplay").textContent = storage.__ad;
+    }
+
+    // 更新地点显示
+    const mockStatus = {
+      apptCenter: storage.__il,
+      apptCenters: storage.__al,
+    };
+    updateLocationDisplay(mockStatus);
+
+    // 更新监控状态
+    if (storage.__active !== undefined) {
+      isRunning = storage.__active;
+      const statusText = isI18nReady
+        ? isRunning
+          ? i18n.t("status_messages.monitoring")
+          : i18n.t("status_messages.not_started")
+        : isRunning
+        ? "状态：监控中..."
+        : "状态：未启动";
+
+      document.getElementById("status").textContent = statusText;
+
+      const buttonText = isI18nReady
+        ? isRunning
+          ? i18n.t("ui.stop_monitoring")
+          : i18n.t("ui.start_monitoring")
+        : isRunning
+        ? "停止监控"
+        : "开始监控";
+
+      document.getElementById("toggleBtn").textContent = buttonText;
+    }
+
+    console.log("已从本地存储加载基本信息");
+  } catch (error) {
+    console.error("从本地存储加载信息失败:", error);
+  }
+}
+
+// 获取预约中心的显示名称
+function getCenterDisplayName(centerValue, locationSelect) {
+  if (!centerValue) return "";
+
+  const option = Array.from(locationSelect.options).find(
+    (opt) => opt.value === centerValue
+  );
+
+  if (option && option.text) {
+    // 清理显示文本，统一格式
+    let displayText = option.text.trim();
+
+    // 处理不同的格式，统一为 "名称(ID)" 的格式
+    // 例如："Toronto (94)" -> "Toronto(94)"
+    // 例如："Toronto - 94" -> "Toronto(94)"
+    // 例如："94" -> "中心(94)"
+
+    // 首先移除多余的空格和标点
+    displayText = displayText.replace(/\s*[-\s]\s*(\d+)\s*/, "($1)");
+    displayText = displayText.replace(/\s*\(\s*(\d+)\s*\)\s*/, "($1)");
+
+    // 如果只是数字，尝试找到更友好的名称
+    if (/^\d+$/.test(displayText)) {
+      displayText = `中心(${displayText})`;
+    }
+
+    // 如果文本太长，适当缩短但保留关键信息
+    if (displayText.length > 15) {
+      const match = displayText.match(/^(.{8,12})[^(]*(\(\d+\))$/);
+      if (match) {
+        displayText = match[1].trim() + match[2];
+      }
+    }
+
+    return displayText;
+  }
+
+  // 如果找不到选项，返回格式化的原值
+  return /^\d+$/.test(centerValue) ? `${centerValue}` : centerValue;
+}
+
+// 更新地点显示
+function updateLocationDisplay(status) {
+  const locationSelect = document.getElementById("locationSelect");
+  let displayText = "-";
+
+  if (status.apptCenters && status.apptCenters.length > 0) {
+    // 多中心模式
+    const centerNames = status.apptCenters
+      .map((centerValue) => getCenterDisplayName(centerValue, locationSelect))
+      .filter((name) => name); // 过滤空值
+
+    if (centerNames.length > 0) {
+      displayText = centerNames.join(", ");
+    }
+  } else if (status.apptCenter) {
+    // 检查是否为逗号分隔的多中心字符串
+    if (status.apptCenter.includes(",")) {
+      const centerValues = status.apptCenter.split(",").map((v) => v.trim());
+      const centerNames = centerValues
+        .map((centerValue) => getCenterDisplayName(centerValue, locationSelect))
+        .filter((name) => name);
+
+      if (centerNames.length > 0) {
+        displayText = centerNames.join(", ");
+      }
+    } else {
+      // 单中心模式
+      const centerName = getCenterDisplayName(
+        status.apptCenter,
+        locationSelect
+      );
+      if (centerName) {
+        displayText = centerName;
+      }
+    }
+  }
+
+  document.getElementById("locationDisplay").textContent = displayText;
+
+  // 如果文本太长，添加title属性显示完整内容
+  const locationDisplayElement = document.getElementById("locationDisplay");
+  if (displayText.length > 20) {
+    locationDisplayElement.title = displayText;
+    // 可以选择截断显示
+    // locationDisplayElement.textContent = displayText.substring(0, 18) + "...";
+  } else {
+    locationDisplayElement.title = "";
+  }
 }

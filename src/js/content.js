@@ -119,9 +119,33 @@
   // 从URL判断签证类型
   const currentVisaType = page.match(/\/(niv|iv)\//)?.[1] || "niv";
 
-  // 获取scheduleId
-  const urlMatch = window.location.pathname.match(/schedule\/(\d+)/);
-  const scheduleId = urlMatch ? urlMatch[1] : null;
+  // 获取scheduleId - 改进版本
+  const getScheduleId = () => {
+    // 首先尝试从URL获取
+    const urlMatch = window.location.pathname.match(/schedule\/(\d+)/);
+    if (urlMatch) {
+      return urlMatch[1];
+    }
+
+    // 如果在仪表板页面，尝试从预约链接获取
+    if (isDashboard) {
+      const appointmentLinks = document.querySelectorAll(
+        "p.consular-appt [href], .ready_to_schedule p.delivery [href]"
+      );
+      if (appointmentLinks.length > 0) {
+        const firstLink = appointmentLinks[0];
+        const linkMatch = firstLink.href.match(/schedule\/(\d+)/);
+        if (linkMatch) {
+          return linkMatch[1];
+        }
+      }
+    }
+
+    // 最后尝试从已存储的appid获取
+    return $appid;
+  };
+
+  const scheduleId = getScheduleId();
 
   if (scheduleId) {
     window.scheduleIdFromPage = scheduleId;
@@ -865,7 +889,6 @@
     let selectedLink;
     if (appointmentLinks.length === 1) {
       selectedLink = appointmentLinks[0];
-      $appid = selectedLink.href.replace(/\D/g, "");
     } else if ($appid) {
       // 使用已保存的预约ID
       selectedLink = Array.from(appointmentLinks).find((link) =>
@@ -874,10 +897,20 @@
     } else {
       // 选择第一个预约链接
       selectedLink = appointmentLinks[0];
-      $appid = selectedLink.href.replace(/\D/g, "");
     }
 
     if (selectedLink) {
+      // 从链接中提取scheduleId
+      const linkMatch = selectedLink.href.match(/schedule\/(\d+)/);
+      if (linkMatch) {
+        $appid = linkMatch[1];
+        window.scheduleIdFromPage = $appid;
+        console.log("从仪表板链接获取到 Schedule ID:", $appid);
+      } else {
+        // 备用方法：提取所有数字
+        $appid = selectedLink.href.replace(/\D/g, "");
+      }
+
       await chrome.storage.local.set({ __id: $appid });
 
       // 获取预约日期信息（从当前页面解析）
