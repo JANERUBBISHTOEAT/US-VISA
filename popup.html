@@ -244,6 +244,14 @@
       <h3>⚙️ 账号设置</h3>
 
       <div class="form-group">
+        <label for="visaTypeSelect">签证类型</label>
+        <select id="visaTypeSelect">
+          <option value="niv">非移民签证 (NIV)</option>
+          <option value="iv">移民签证 (IV)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label for="usernameInput">用户名 (邮箱)</label>
         <input
           type="email"
@@ -267,11 +275,17 @@
         <button id="cancelConfigBtn" class="btn-secondary">取消</button>
       </div>
 
+      <div class="button-row">
+        <button id="goToLoginBtn" class="btn-primary">前往登录</button>
+        <button id="goToScheduleBtn" class="btn-primary">前往预约</button>
+      </div>
+
       <button id="resetBtn" class="btn-danger btn-reset">重置扩展</button>
 
       <div class="tips">
         🔐 <strong>隐私说明:</strong><br />
-        账号信息仅保存在本地，用于自动登录和预约检查
+        账号信息仅保存在本地，用于自动登录和预约检查<br />
+        💡 输入信息会自动保存，无需担心切换标签页丢失
       </div>
     </div>
 

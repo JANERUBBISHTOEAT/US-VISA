@@ -13,8 +13,9 @@
     $failed = false,
     $resets = 0,
     $timer = 60000, // 默认1分钟检查间隔
-    $version = "1.0.0",
-    $checkInterval = null;
+    $version = "2.0.0",
+    $checkInterval = null,
+    $visaType = "niv"; // 默认非移民签证
 
   // 工具函数
   const delay = async ($delay = 2000) =>
@@ -63,6 +64,9 @@
   const isConfirmation = !!page.match(
     /^\/[a-z]{2}-[a-z]{2}\/(n|)iv\/schedule\/\d{1,}\/appointment\/instructions$/
   );
+
+  // 从URL判断签证类型
+  const currentVisaType = page.match(/\/(niv|iv)\//)?.[1] || "niv";
 
   // 获取scheduleId
   const urlMatch = window.location.pathname.match(/schedule\/(\d+)/);
@@ -277,6 +281,84 @@
     }
   }
 
+  // 获取当前预约时间和详情
+  function getCurrentAppointmentInfo() {
+    try {
+      // 在仪表板页面查找预约信息
+      if (isDashboard) {
+        const appointmentElements = document.querySelectorAll(
+          ".consular-appt, .ready_to_schedule"
+        );
+
+        for (const element of appointmentElements) {
+          // 查找日期文本
+          const dateText = element.textContent.match(
+            /(\w+\s+\d{1,2},\s+\d{4})/
+          );
+          const timeText = element.textContent.match(/(\d{1,2}:\d{2})/);
+
+          if (dateText) {
+            const appointmentDate = new Date(dateText[1]);
+            const formattedDate =
+              appointmentDate.getFullYear() +
+              "-" +
+              String(appointmentDate.getMonth() + 1).padStart(2, "0") +
+              "-" +
+              String(appointmentDate.getDate()).padStart(2, "0");
+
+            const timeStr = timeText ? timeText[1] : "";
+
+            return {
+              date: formattedDate,
+              time: timeStr,
+              fullText: dateText[1] + (timeStr ? " " + timeStr : ""),
+            };
+          }
+        }
+      }
+
+      // 在预约页面查找当前选中的日期时间
+      if (isAppointment) {
+        const dateField = document.getElementById(
+          "appointments_consulate_appointment_date"
+        );
+        const timeField = document.getElementById(
+          "appointments_consulate_appointment_time"
+        );
+
+        if (dateField && dateField.value) {
+          return {
+            date: dateField.value,
+            time: timeField ? timeField.value : "",
+            fullText:
+              dateField.value +
+              (timeField && timeField.value ? " " + timeField.value : ""),
+          };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error("获取预约信息失败:", error);
+      return null;
+    }
+  }
+
+  // 定期更新预约信息
+  function updateAppointmentInfo() {
+    const appointmentInfo = getCurrentAppointmentInfo();
+    if (appointmentInfo) {
+      $apptDate = appointmentInfo.date;
+      chrome.storage.local.set({
+        __ad: appointmentInfo.date,
+        __at: appointmentInfo.time,
+        __af: appointmentInfo.fullText,
+      });
+
+      toast(`当前预约: ${appointmentInfo.fullText}`, "info");
+    }
+  }
+
   // 启动监控
   function startMonitoring() {
     if ($checkInterval) return;
@@ -291,6 +373,7 @@
     $checkInterval = setInterval(() => {
       if ($active) {
         getNewDate(0, $apptCenter, $ascCenter);
+        updateAppointmentInfo(); // 添加预约信息更新
       }
     }, $timer);
 
@@ -322,6 +405,8 @@
         "__pw",
         "__id",
         "__ad",
+        "__at",
+        "__af",
         "__il",
         "__al",
         "__ar",
@@ -330,6 +415,7 @@
         "__active",
         "__timer",
         "__it",
+        "__vt",
       ]);
 
       $username = storage.__un;
@@ -343,13 +429,21 @@
       $end = storage.__en;
       $active = storage.__active || false;
       $timer = storage.__timer || 60000;
+      $visaType = storage.__vt || currentVisaType || "niv";
 
       console.log("配置已加载:", {
         username: $username ? "已设置" : "未设置",
         apptCenter: $apptCenter,
         apptDate: $apptDate,
+        visaType: $visaType,
         active: $active,
       });
+
+      // 同步签证类型到存储
+      if (currentVisaType && currentVisaType !== $visaType) {
+        $visaType = currentVisaType;
+        await chrome.storage.local.set({ __vt: $visaType });
+      }
     } catch (error) {
       console.error("加载配置失败:", error);
     }
@@ -358,6 +452,9 @@
   // 页面初始化逻辑
   async function init() {
     await loadConfiguration();
+
+    // 更新预约信息
+    updateAppointmentInfo();
 
     // 处理不同页面类型
     if (isLoggedOut) {
@@ -568,11 +665,21 @@
     }
 
     if (request.action === "get_status") {
+      // 实时更新预约信息
+      updateAppointmentInfo();
+
       return sendResponse({
         active: $active,
         apptCenter: $apptCenter,
         apptDate: $apptDate,
         scheduleId: scheduleId,
+        visaType: $visaType,
+        currentPage: {
+          isSignIn,
+          isDashboard,
+          isAppointment,
+          isConfirmation,
+        },
       });
     }
 
@@ -588,6 +695,10 @@
       if (request.center) {
         $apptCenter = request.center;
         chrome.storage.local.set({ __il: $apptCenter });
+      }
+      if (request.visaType) {
+        $visaType = request.visaType;
+        chrome.storage.local.set({ __vt: $visaType });
       }
       return sendResponse({ success: true });
     }

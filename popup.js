@@ -11,9 +11,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 // 加载默认设置
 async function loadDefaultSettings() {
   try {
-    const storage = await chrome.storage.local.get(["__il"]);
+    const storage = await chrome.storage.local.get(["__il", "__vt"]);
     if (storage.__il) {
       document.getElementById("locationNumb").value = storage.__il;
+    }
+    if (storage.__vt) {
+      document.getElementById("visaTypeSelect").value = storage.__vt;
     }
   } catch (error) {
     console.error("加载默认设置失败:", error);
@@ -33,6 +36,13 @@ function setupEventListeners() {
     .getElementById("cancelConfigBtn")
     .addEventListener("click", hideConfig);
   document.getElementById("resetBtn").addEventListener("click", resetExtension);
+  document.getElementById("goToLoginBtn").addEventListener("click", goToLogin);
+  document
+    .getElementById("goToScheduleBtn")
+    .addEventListener("click", goToSchedule);
+
+  // 添加实时保存功能
+  setupAutoSave();
 }
 
 // 加载当前状态
@@ -101,6 +111,23 @@ function updateUI(status) {
     status.apptCenter || "-";
   document.getElementById("currentDateDisplay").textContent =
     status.apptDate || "-";
+
+  // 显示页面状态
+  let pageStatus = "未知页面";
+  if (status.currentPage) {
+    if (status.currentPage.isSignIn) pageStatus = "登录页面";
+    else if (status.currentPage.isDashboard) pageStatus = "仪表板";
+    else if (status.currentPage.isAppointment) pageStatus = "预约页面";
+    else if (status.currentPage.isConfirmation) pageStatus = "确认页面";
+  }
+
+  document.getElementById("monitorStatus").textContent = pageStatus;
+
+  // 更新签证类型显示
+  if (status.visaType) {
+    const visaTypeText = status.visaType === "niv" ? "非移民签证" : "移民签证";
+    console.log("当前签证类型:", visaTypeText);
+  }
 }
 
 // 切换监控状态
@@ -199,7 +226,12 @@ function hideConfig() {
 // 加载保存的配置
 async function loadSavedConfig() {
   try {
-    const storage = await chrome.storage.local.get(["__un", "__pw", "__il"]);
+    const storage = await chrome.storage.local.get([
+      "__un",
+      "__pw",
+      "__il",
+      "__vt",
+    ]);
 
     if (storage.__un) {
       document.getElementById("usernameInput").value = storage.__un;
@@ -209,6 +241,9 @@ async function loadSavedConfig() {
     }
     if (storage.__il) {
       document.getElementById("centerInput").value = storage.__il;
+    }
+    if (storage.__vt) {
+      document.getElementById("visaTypeSelect").value = storage.__vt;
     }
   } catch (error) {
     console.error("加载配置失败:", error);
@@ -220,6 +255,7 @@ async function saveConfig() {
   const username = document.getElementById("usernameInput").value.trim();
   const password = document.getElementById("passwordInput").value.trim();
   const center = document.getElementById("centerInput").value.trim();
+  const visaType = document.getElementById("visaTypeSelect").value;
 
   if (!username || !password) {
     alert("请填写用户名和密码");
@@ -232,6 +268,7 @@ async function saveConfig() {
       __un: username,
       __pw: password,
       __il: center,
+      __vt: visaType,
     });
 
     // 尝试发送给content script（如果可用）
@@ -246,6 +283,7 @@ async function saveConfig() {
           username: username,
           password: password,
           center: center,
+          visaType: visaType,
         });
         console.log("配置已发送给content script");
       } catch (msgError) {
@@ -266,6 +304,58 @@ async function saveConfig() {
   }
 }
 
+// 设置自动保存功能
+function setupAutoSave() {
+  const inputs = [
+    "usernameInput",
+    "passwordInput",
+    "centerInput",
+    "visaTypeSelect",
+  ];
+
+  inputs.forEach((inputId) => {
+    const input = document.getElementById(inputId);
+    if (input) {
+      input.addEventListener("input", debounce(autoSaveConfig, 500));
+      input.addEventListener("change", autoSaveConfig);
+    }
+  });
+}
+
+// 防抖函数
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// 自动保存配置
+async function autoSaveConfig() {
+  try {
+    const username = document.getElementById("usernameInput").value.trim();
+    const password = document.getElementById("passwordInput").value.trim();
+    const center = document.getElementById("centerInput").value.trim();
+    const visaType = document.getElementById("visaTypeSelect").value;
+
+    await chrome.storage.local.set({
+      __un: username,
+      __pw: password,
+      __il: center,
+      __vt: visaType,
+    });
+
+    console.log("配置已自动保存");
+  } catch (error) {
+    console.error("自动保存失败:", error);
+  }
+}
+
 // 显示通知
 function showNotification(title, message) {
   if (chrome.notifications) {
@@ -277,6 +367,44 @@ function showNotification(title, message) {
     });
   }
   console.log(`[${title}] ${message}`);
+}
+
+// 前往登录页面
+async function goToLogin() {
+  try {
+    const storage = await chrome.storage.local.get(["__vt"]);
+    const visaType = storage.__vt || "niv";
+    const loginUrl = `https://ais.usvisa-info.com/en-ca/${visaType}/users/sign_in`;
+
+    chrome.tabs.create({ url: loginUrl });
+    showNotification("页面跳转", "正在打开登录页面");
+  } catch (error) {
+    console.error("跳转登录页面失败:", error);
+    alert("跳转失败: " + error.message);
+  }
+}
+
+// 前往预约页面
+async function goToSchedule() {
+  try {
+    const storage = await chrome.storage.local.get(["__vt", "__id"]);
+    const visaType = storage.__vt || "niv";
+
+    if (storage.__id) {
+      // 如果有预约ID，直接跳转到预约页面
+      const scheduleUrl = `https://ais.usvisa-info.com/en-ca/${visaType}/schedule/${storage.__id}/appointment`;
+      chrome.tabs.create({ url: scheduleUrl });
+      showNotification("页面跳转", "正在打开预约页面");
+    } else {
+      // 没有预约ID，跳转到仪表板
+      const dashboardUrl = `https://ais.usvisa-info.com/en-ca/${visaType}`;
+      chrome.tabs.create({ url: dashboardUrl });
+      showNotification("页面跳转", "正在打开仪表板，请选择预约");
+    }
+  } catch (error) {
+    console.error("跳转预约页面失败:", error);
+    alert("跳转失败: " + error.message);
+  }
 }
 
 // 重置扩展
@@ -302,18 +430,18 @@ async function resetExtension() {
       // 重新加载状态
       isRunning = false;
       document.getElementById("status").textContent = "状态：未启动";
-      document.getElementById("toggleBtn").textContent = "开始监控";
-
-      // 清除表单
+      document.getElementById("toggleBtn").textContent = "开始监控"; // 清除表单
       document.getElementById("locationNumb").value = "";
       document.getElementById("usernameInput").value = "";
       document.getElementById("passwordInput").value = "";
       document.getElementById("centerInput").value = "";
+      document.getElementById("visaTypeSelect").value = "niv";
 
       // 清除显示信息
       document.getElementById("scheduleDisplay").textContent = "-";
       document.getElementById("locationDisplay").textContent = "-";
       document.getElementById("currentDateDisplay").textContent = "-";
+      document.getElementById("monitorStatus").textContent = "待启动";
 
       showNotification("扩展已重置", "所有数据已清除");
     } catch (error) {
