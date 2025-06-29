@@ -2,31 +2,277 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Visa Checker</title>
+    <title>US Visa Scheduler</title>
     <style>
       body {
-        font-family: sans-serif;
-        padding: 10px;
-        width: 300px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        padding: 15px;
+        width: 350px;
+        margin: 0;
+        background: #f5f5f5;
       }
-      #status {
-        font-weight: bold;
-        margin: 5px 0;
+
+      .panel {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h3 {
+        margin: 0 0 15px 0;
+        color: #2c3e50;
+        text-align: center;
+        font-size: 18px;
+      }
+
+      .form-group {
+        margin-bottom: 12px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #34495e;
+        font-size: 13px;
+      }
+
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+      }
+
+      .status {
+        font-weight: 600;
+        margin: 10px 0;
+        padding: 8px;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 14px;
+      }
+
+      .status.active {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .status.inactive {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      button {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: 8px;
+      }
+
+      .btn-primary {
+        background: #3498db;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #2980b9;
+      }
+
+      .btn-success {
+        background: #27ae60;
+        color: white;
+      }
+
+      .btn-success:hover {
+        background: #229954;
+      }
+
+      .btn-danger {
+        background: #e74c3c;
+        color: white;
+      }
+
+      .btn-danger:hover {
+        background: #c0392b;
+      }
+
+      .btn-secondary {
+        background: #95a5a6;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background: #7f8c8d;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 15px 0;
+      }
+
+      .info-item {
+        background: #ecf0f1;
+        padding: 8px;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 12px;
+      }
+
+      .info-label {
+        font-weight: 600;
+        color: #2c3e50;
+        display: block;
+      }
+
+      .info-value {
+        color: #3498db;
+        font-weight: 500;
+      }
+
+      .input-row {
+        display: flex;
+        gap: 8px;
+        align-items: end;
+      }
+
+      .input-row .form-group {
+        flex: 1;
+        margin-bottom: 0;
+      }
+
+      .tips {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin-top: 10px;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn-reset {
+        margin-top: 10px;
+      }
+
+      .hidden {
+        display: none;
       }
     </style>
   </head>
   <body>
-    <h3>美签预约监控</h3>
+    <!-- 主面板 -->
+    <div id="mainPanel" class="panel">
+      <h3>🇺🇸 美签预约监控</h3>
 
-    <label for="locationNumb">地点编号：</label>
-    <input type="text" id="locationNumb" placeholder="如 95 = Vancouver" />
+      <div class="form-group">
+        <label for="locationNumb">预约中心编号</label>
+        <input type="text" id="locationNumb" placeholder="如: 95 (Vancouver)" />
+      </div>
 
-    <div id="status">状态：未启动</div>
-    <button id="toggleBtn">开始监控</button>
+      <div class="form-group">
+        <label for="intervalSelect">检查间隔</label>
+        <select id="intervalSelect">
+          <option value="1">1 分钟</option>
+          <option value="2" selected>2 分钟</option>
+          <option value="5">5 分钟</option>
+          <option value="10">10 分钟</option>
+        </select>
+      </div>
 
-    <div id="info">
-      <p>预约 ID: <span id="scheduleDisplay">-</span></p>
-      <p>地点 ID: <span id="locationDisplay">-</span></p>
+      <div id="status" class="status inactive">状态：未启动</div>
+
+      <button id="toggleBtn" class="btn-primary">开始监控</button>
+      <button id="configBtn" class="btn-secondary">设置</button>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">预约 ID</span>
+          <span id="scheduleDisplay" class="info-value">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">地点 ID</span>
+          <span id="locationDisplay" class="info-value">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">当前预约</span>
+          <span id="currentDateDisplay" class="info-value">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">监控状态</span>
+          <span id="monitorStatus" class="info-value">待启动</span>
+        </div>
+      </div>
+
+      <div class="tips">
+        💡 <strong>使用提示:</strong><br />
+        1. 首先在设置中配置账号信息<br />
+        2. 在预约页面启动监控<br />
+        3. 发现更早预约时会自动通知
+      </div>
+    </div>
+
+    <!-- 配置面板 -->
+    <div id="configPanel" class="panel hidden">
+      <h3>⚙️ 账号设置</h3>
+
+      <div class="form-group">
+        <label for="usernameInput">用户名 (邮箱)</label>
+        <input
+          type="email"
+          id="usernameInput"
+          placeholder="your-email@example.com"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="passwordInput">密码</label>
+        <input type="password" id="passwordInput" placeholder="输入密码" />
+      </div>
+
+      <div class="form-group">
+        <label for="centerInput">默认预约中心</label>
+        <input type="text" id="centerInput" placeholder="如: 95" />
+      </div>
+
+      <div class="button-row">
+        <button id="saveConfigBtn" class="btn-success">保存设置</button>
+        <button id="cancelConfigBtn" class="btn-secondary">取消</button>
+      </div>
+
+      <button id="resetBtn" class="btn-danger btn-reset">重置扩展</button>
+
+      <div class="tips">
+        🔐 <strong>隐私说明:</strong><br />
+        账号信息仅保存在本地，用于自动登录和预约检查
+      </div>
     </div>
 
     <script src="popup.js"></script>

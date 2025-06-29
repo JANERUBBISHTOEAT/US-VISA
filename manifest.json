@@ -1,18 +1,25 @@
 {
     "manifest_version": 3,
-    "name": "US Visa",
-    "version": "1.0",
-    "description": "Check available US visa appointment dates.",
+    "name": "US Visa Appointment Scheduler",
+    "version": "2.0.0",
+    "description": "Advanced US visa appointment rescheduler with auto-login and monitoring capabilities.",
     "permissions": [
         "scripting",
-        "activeTab"
+        "activeTab",
+        "storage",
+        "notifications"
     ],
     "host_permissions": [
         "https://ais.usvisa-info.com/*"
     ],
     "action": {
         "default_popup": "popup.html",
-        "default_title": "Check Visa Dates"
+        "default_title": "US Visa Scheduler",
+        "default_icon": {
+            "16": "icon16.png",
+            "48": "icon48.png",
+            "128": "icon128.png"
+        }
     },
     "background": {
         "service_worker": "background.js"
@@ -24,7 +31,13 @@
             ],
             "js": [
                 "content.js"
-            ]
+            ],
+            "run_at": "document_end"
         }
-    ]
+    ],
+    "icons": {
+        "16": "icon16.png",
+        "48": "icon48.png",
+        "128": "icon128.png"
+    }
 }
