@@ -21,23 +21,38 @@
       i18n = new I18n();
       await i18n.init();
       isI18nReady = true;
-      console.log("Content script 国际化初始化完成");
+      logI18n("log_messages.i18n_init_complete", "info");
     } catch (error) {
       console.error("Content script 国际化初始化失败:", error);
+      logI18n("log_messages.i18n_init_failed", "error");
       isI18nReady = false;
     }
   }
 
-  // 带国际化的toast函数
-  const toast = (messageKey, type = "info", params = {}) => {
+  // 统一的国际化日志函数
+  const logI18n = (messageKey, type = "info", params = {}) => {
     let message;
     if (isI18nReady && i18n) {
-      message = i18n.t(messageKey, params);
+      try {
+        message = i18n.t(messageKey, params);
+      } catch (error) {
+        message = messageKey; // 如果翻译失败，回退到原始键
+      }
     } else {
       message = messageKey; // 回退到原始文本
     }
-    console.log(`[VISA-CHECKER ${type.toUpperCase()}]:`, message);
+
+    const prefix = `[VISA-CHECKER ${type.toUpperCase()}]`;
+    console.log(prefix, message);
+
+    return message; // 返回消息供其他用途使用
+  };
+
+  // 带国际化的toast函数 - 同时输出到控制台
+  const toast = (messageKey, type = "info", params = {}) => {
+    const message = logI18n(messageKey, type, params);
     // 可以添加更好的通知显示
+    return message;
   };
 
   // 带国际化的通知函数
@@ -59,9 +74,12 @@
         message: message,
       });
     } catch (error) {
-      console.log("发送通知失败:", error);
+      logI18n("log_messages.send_notification_failed", "error", {
+        error: error.message,
+      });
     }
-    console.log(`[NOTIFICATION] ${title}: ${message}`);
+
+    logI18n("log_messages.notification_sent", "info", { title, message });
   };
 
   // 核心配置变量
@@ -149,14 +167,16 @@
 
   if (scheduleId) {
     window.scheduleIdFromPage = scheduleId;
-    console.log("Schedule ID (from URL):", scheduleId);
+    logI18n("log_messages.schedule_id_from_url", "info", { scheduleId });
   }
 
   // 随机延迟函数 - 模拟人类操作
   const randomDelay = async (baseMs = 2000, varianceMs = 1000) => {
     const variance = Math.random() * varianceMs;
     const totalDelay = baseMs + variance;
-    console.log(`随机延迟: ${Math.round(totalDelay)}ms`);
+    logI18n("log_messages.random_delay", "info", {
+      delay: Math.round(totalDelay),
+    });
     await new Promise((r) => setTimeout(r, totalDelay));
   };
 
@@ -194,8 +214,7 @@
           await randomDelay(2000, 3000);
         }
       } catch (error) {
-        console.error(`检查中心 ${center} 时出错:`, error);
-        toast("toast_messages.checking_center_failed", "error", {
+        logI18n("toast_messages.checking_center_failed", "error", {
           center: center,
           error: error.message,
         });
@@ -303,7 +322,7 @@
         "notifications.found_earlier_appointment"
       );
     } catch (error) {
-      console.error("检查预约时出错:", error);
+      logI18n("toast_messages.auth_failed", "error");
       toast("toast_messages.auth_failed", "error");
 
       // 如果是认证错误，停止检查
@@ -374,7 +393,7 @@
         }
       }
     } catch (error) {
-      console.error("填写表单时出错:", error);
+      logI18n("toast_messages.form_validation_failed", "error");
       toast("toast_messages.form_validation_failed", "error");
     }
   }
@@ -394,17 +413,29 @@
 
       // 检查必填字段
       if (!dateField || !dateField.value) {
-        console.log("日期字段未填写");
+        const fieldName =
+          isI18nReady && i18n ? i18n.t("field_names.date") : "date";
+        logI18n("log_messages.form_validation_field_missing", "warning", {
+          field: fieldName,
+        });
         return false;
       }
 
       if (!timeField || !timeField.value) {
-        console.log("时间字段未填写");
+        const fieldName =
+          isI18nReady && i18n ? i18n.t("field_names.time") : "time";
+        logI18n("log_messages.form_validation_field_missing", "warning", {
+          field: fieldName,
+        });
         return false;
       }
 
       if (!centerField || !centerField.value) {
-        console.log("预约中心字段未填写");
+        const fieldName =
+          isI18nReady && i18n ? i18n.t("field_names.center") : "center";
+        logI18n("log_messages.form_validation_field_missing", "warning", {
+          field: fieldName,
+        });
         return false;
       }
 
@@ -425,15 +456,21 @@
           !ascTimeField?.value ||
           !ascCenterField?.value
         ) {
-          console.log("ASC预约字段未完整填写");
+          const fieldName =
+            isI18nReady && i18n
+              ? i18n.t("field_names.asc_appointment")
+              : "asc_appointment";
+          logI18n("log_messages.form_validation_field_missing", "warning", {
+            field: fieldName,
+          });
           return false;
         }
       }
 
-      console.log("表单验证通过");
+      logI18n("log_messages.form_validation_passed", "info");
       return true;
     } catch (error) {
-      console.error("表单验证失败:", error);
+      logI18n("toast_messages.form_validation_failed", "error");
       return false;
     }
   }
@@ -499,7 +536,9 @@
         }
       }
     } catch (error) {
-      console.error("处理ASC预约时出错:", error);
+      logI18n("log_messages.get_appointment_info_failed", "error", {
+        error: error.message,
+      });
     }
   }
 
@@ -515,7 +554,9 @@
         for (const element of appointmentElements) {
           // 更精确的日期时间匹配，支持 "29 April, 2026, 10:15" 格式
           const fullText = element.textContent.trim();
-          console.log("检查预约元素文本:", fullText);
+          logI18n("log_messages.checking_appointment_element", "debug", {
+            fullText,
+          });
 
           // 匹配 "Consular Appointment: 29 April, 2026, 10:15 Vancouver local time"
           const appointmentMatch = fullText.match(
@@ -555,7 +596,7 @@
                   monthIndex + 1
                 ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-                console.log("解析到预约信息:", {
+                logI18n("log_messages.parsed_appointment_info", "info", {
                   date: formattedDate,
                   time: time,
                   fullText: appointmentInfo,
@@ -620,7 +661,9 @@
 
       return null;
     } catch (error) {
-      console.error("获取预约信息失败:", error);
+      logI18n("log_messages.get_appointment_info_failed", "error", {
+        error: error.message,
+      });
       return null;
     }
   }
@@ -636,8 +679,12 @@
         __af: appointmentInfo.fullText,
       });
 
-      console.log(`当前预约信息: ${JSON.stringify(appointmentInfo)}`);
-      toast(`当前预约: ${appointmentInfo.fullText}`, "info");
+      logI18n("log_messages.current_appointment_info", "info", {
+        appointmentInfo: JSON.stringify(appointmentInfo),
+      });
+      toast("toast_messages.current_appointment_info", "info", {
+        appointment: appointmentInfo.fullText,
+      });
     }
   }
 
@@ -648,15 +695,15 @@
 
     // 只有在reschedule页面才能启动真正的监控
     if (!isAppointment) {
-      console.error("只能在reschedule页面启动监控");
-      toast("只能在预约页面启动监控", "error");
+      logI18n("log_messages.monitoring_can_only_start_on_reschedule", "error");
+      toast("alerts.open_appointment_page", "error");
       return;
     }
 
     // 确保已选择预约中心
     if (!hasSelectedCenter() && (!$apptCenters || $apptCenters.length === 0)) {
-      console.error("必须选择预约中心才能启动监控");
-      toast("请先选择预约中心", "error");
+      logI18n("log_messages.must_select_center_to_start", "error");
+      toast("alerts.select_center", "error");
       return;
     }
 
@@ -673,7 +720,9 @@
       startedFromReschedule: true,
     };
 
-    console.log("创建监控上下文:", monitoringContext);
+    logI18n("log_messages.creating_monitoring_context", "info", {
+      context: JSON.stringify(monitoringContext),
+    });
 
     // 启动页面监控，确保不离开reschedule页面
     startPageMonitoring();
@@ -691,16 +740,18 @@
       if ($active) {
         // 再次确认仍在reschedule页面
         if (!isAppointment) {
-          console.log("不再在reschedule页面，停止监控");
+          logI18n("log_messages.left_reschedule_page", "warning", {
+            currentPath: "not appointment",
+          });
           stopMonitoring();
           return;
         }
 
         // 生成随机间隔
         const randomInterval = getRandomInterval($timer);
-        console.log(
-          `下次检查将在 ${Math.round(randomInterval / 1000)} 秒后进行`
-        );
+        logI18n("log_messages.next_check_in", "info", {
+          interval: Math.round(randomInterval / 1000),
+        });
 
         setTimeout(() => {
           if ($active && isAppointment) {
@@ -722,7 +773,7 @@
       __monitoringContext: monitoringContext, // 持久化监控上下文
     });
 
-    console.log("监控已启动，监控上下文已保存");
+    logI18n("log_messages.monitoring_started", "info");
   }
 
   // 启动页面监控 - 确保监控期间不离开reschedule页面
@@ -739,9 +790,8 @@
       const currentIsAppointment = !!currentPath.match(
         /^\/[a-z]{2}-[a-z]{2}\/(n|)iv\/schedule\/\d{1,}\/appointment$/
       );
-
       if (!currentIsAppointment) {
-        console.log("检测到离开了reschedule页面，页面路径:", currentPath);
+        logI18n("log_messages.left_reschedule_page", "info", { currentPath });
 
         // 检查是否是确认页面（预约成功）
         const isConfirmationPage = !!currentPath.match(
@@ -749,9 +799,9 @@
         );
 
         if (isConfirmationPage) {
-          console.log("到达确认页面，预约可能已成功，停止监控");
+          logI18n("log_messages.confirmation_page_appointment_success", "info");
           stopMonitoring();
-          toast("检测到预约确认页面，监控已停止", "success");
+          toast("notifications.monitoring_stopped", "success");
           return;
         }
 
@@ -761,16 +811,13 @@
           ($apptCenter && $apptCenter.trim() !== "");
 
         if (!hasValidCenterForMonitoring) {
-          console.log("监控期间未检测到有效的center选择，停止监控");
+          logI18n("log_messages.no_valid_center_during_monitoring", "warning");
           stopMonitoring();
-          toast("未选择预约中心，监控已停止", "warning");
+          toast("alerts.select_center", "warning");
           return;
         }
 
-        console.log("监控期间有有效的center选择，准备导航回reschedule页面:", {
-          apptCenters: $apptCenters,
-          apptCenter: $apptCenter,
-        });
+        logI18n("log_messages.valid_center_during_monitoring", "info");
 
         // 检查是否退出登录
         const isLoggedOutPage = !!currentPath.match(
@@ -781,8 +828,8 @@
         );
 
         if (isLoggedOutPage || isSignInPage) {
-          console.log("检测到已退出登录，启动重新登录流程");
-          toast("检测到已退出登录，正在重新登录...", "info");
+          logI18n("log_messages.logout_detected_relogin", "info");
+          toast("toast_messages.auth_failed", "info");
 
           // 使用监控上下文进行导航，不需要设置额外的导航标志
           // 监控上下文已经包含了所有必要的信息
@@ -796,8 +843,8 @@
         }
 
         // 其他情况，尝试导航回reschedule页面
-        console.log("尝试导航回reschedule页面");
-        toast("正在返回预约页面...", "info");
+        logI18n("log_messages.other_case_navigate_back", "info");
+        toast("notifications.navigating", "info");
 
         // 监控上下文已经包含了恢复监控所需的所有信息
         // 不需要设置额外的导航标志
@@ -839,7 +886,7 @@
       "__maintainMonitoring",
     ]);
 
-    console.log("监控已完全停止，所有相关状态已清除");
+    logI18n("log_messages.monitoring_completely_stopped", "info");
   }
 
   // 初始化配置
@@ -878,7 +925,7 @@
       $visaType = storage.__vt || currentVisaType || "niv";
       $autoSubmit = storage.__as || false;
 
-      // 处理多中心配置
+      // 如果存储的是逗号分隔的字符串，转换为数组
       if (
         $apptCenter &&
         typeof $apptCenter === "string" &&
@@ -886,16 +933,23 @@
       ) {
         // 如果存储的是逗号分隔的字符串，转换为数组
         $apptCenters = $apptCenter.split(",").map((center) => center.trim());
-        console.log("检测到多中心配置:", $apptCenters);
+        logI18n("log_messages.detected_configured_centers", "info", {
+          centers: $apptCenters,
+        });
       } else if ($apptCenter) {
         // 单中心配置
         $apptCenters = [$apptCenter];
       }
 
-      console.log("配置已加载:", {
-        username: $username ? "已设置" : "未设置",
+      logI18n("log_messages.config_loaded", "info", {
+        hasUsername: $username
+          ? isI18nReady && i18n
+            ? i18n.t("info_values.enabled")
+            : "set"
+          : isI18nReady && i18n
+          ? i18n.t("info_values.disabled")
+          : "not set",
         apptCenter: $apptCenter,
-        apptCenters: $apptCenters,
         apptDate: $apptDate,
         visaType: $visaType,
         active: $active,
@@ -908,7 +962,9 @@
         await chrome.storage.local.set({ __vt: $visaType });
       }
     } catch (error) {
-      console.error("加载配置失败:", error);
+      logI18n("log_messages.config_load_failed", "error", {
+        error: error.message,
+      });
     }
   }
 
@@ -919,15 +975,7 @@
     // 清理过期的监控上下文
     await cleanupExpiredMonitoringContext();
 
-    console.log("页面初始化 - 当前页面类型:", {
-      isLoggedOut,
-      isSignIn,
-      isDashboard,
-      isAppointment,
-      isAddressPage,
-      isConfirmation,
-      currentPath: page,
-    });
+    logI18n("log_messages.page_init", "info");
 
     // 更新预约信息但不开始任何自动操作
     updateAppointmentInfo();
@@ -949,24 +997,27 @@
     // 检查是否有持久化的监控上下文
     const hasMonitoringContext = storage.__monitoringContext;
 
-    console.log("监控状态检查:", {
+    logI18n("log_messages.monitoring_context_check", "info", {
       active: $active,
       apptCenters: $apptCenters,
-      apptCenter: $apptCenter,
       shouldMaintainMonitoring: shouldMaintainMonitoring,
       hasMonitoringContext: hasMonitoringContext,
-      currentPage: { isLoggedOut, isSignIn, isDashboard, isAppointment },
     });
 
     if (storage.__navigationFlow) {
-      console.log("检测到导航流程标记，开始自动页面处理");
+      logI18n("log_messages.navigation_flow_detected", "info");
       await handleNavigationFlow(storage);
     } else if (hasMonitoringContext && !isAppointment) {
       // 如果有监控上下文但不在reschedule页面，需要导航回去
-      console.log("检测到监控上下文但不在reschedule页面，启动导航回归");
+      logI18n(
+        "log_messages.monitoring_context_detected_need_navigation",
+        "info"
+      );
 
       const monitoringContext = storage.__monitoringContext;
-      console.log("监控上下文:", monitoringContext);
+      logI18n("log_messages.monitoring_context_details", "info", {
+        context: JSON.stringify(monitoringContext),
+      });
 
       // 恢复监控配置
       if (monitoringContext.apptCenters) {
@@ -975,17 +1026,17 @@
       }
 
       if (isLoggedOut) {
-        console.log("已退出登录，需要重新登录并导航到reschedule页面");
+        logI18n("log_messages.logged_out_need_relogin", "info");
 
         // 直接重新加载页面，init()会检测到监控上下文并处理导航
         location.reload();
         return;
       } else {
         // 在美签网站但不在reschedule页面，直接导航
-        console.log("在美签网站但不在reschedule页面，直接导航回reschedule");
+        logI18n("log_messages.on_visa_site_but_not_reschedule", "info");
 
         // 导航到reschedule页面
-        toast("正在返回预约页面以恢复监控...", "info");
+        toast("notifications.navigating", "info");
         const scheduleId = getScheduleId() || monitoringContext.scheduleId;
         if (scheduleId) {
           const appointmentUrl = `/en-ca/${$visaType}/schedule/${scheduleId}/appointment`;
@@ -997,16 +1048,16 @@
         return;
       }
     } else {
-      console.log("未检测到导航流程标记，等待用户手动操作");
+      logI18n("log_messages.no_navigation_flow", "info");
       // 不进行任何自动操作，只准备环境
       if (isAppointment) {
-        console.log("在reschedule页面，准备监控环境但不自动开始");
+        logI18n("log_messages.on_reschedule_page_preparing", "info");
         await prepareAppointmentPageForMonitoring();
 
         // 只有在有有效的监控上下文时才恢复监控
         if (hasMonitoringContext) {
           const monitoringContext = storage.__monitoringContext;
-          console.log("检测到有效的监控上下文，恢复监控状态");
+          logI18n("log_messages.detected_valid_monitoring_context", "info");
 
           // 恢复监控配置
           if (monitoringContext.apptCenters) {
@@ -1016,14 +1067,14 @@
 
           setTimeout(() => {
             startMonitoring();
-            toast("已恢复监控状态", "success");
+            toast("notifications.monitoring_started", "success");
           }, 2000);
         }
       }
 
       // 重要：不自动启动监控，除非有明确的监控上下文
       // 用户必须手动点击"开始监控"才会触发监控和fetch操作
-      console.log("页面已初始化，等待用户手动开始监控或恢复监控上下文");
+      logI18n("log_messages.page_initialized_waiting", "info");
     }
   }
 
@@ -1033,24 +1084,15 @@
     const selectedCentersForTarget = storage.__selectedCentersForTarget;
     const maintainMonitoring = storage.__maintainMonitoring; // 是否为了维护现有监控
 
-    console.log("导航流程处理:", {
+    logI18n("log_messages.navigation_flow_processing", "info", {
       targetIsMonitoring,
-      selectedCentersForTarget,
       maintainMonitoring,
-      currentPageType: {
-        isLoggedOut,
-        isSignIn,
-        isDashboard,
-        isAppointment,
-        isAddressPage,
-        isConfirmation,
-      },
     });
 
     // 处理不同页面类型的自动跳转
     if (isLoggedOut) {
       // 在首页，点击登录链接
-      toast("检测到首页，寻找登录链接...", "info");
+      toast("log_messages.homepage_detected_finding_login", "info");
       const signInLink = document.querySelector(
         ".homeSelectionsContainer a[href*='/sign_in']"
       );
@@ -1063,21 +1105,21 @@
 
     if (isSignIn) {
       // 处理登录页面
-      toast("检测到登录页面，开始自动登录...", "info");
+      toast("log_messages.login_page_detected_auto_login", "info");
       await handleSignInPage();
       return;
     }
 
     if (isDashboard) {
       // 处理仪表板页面，跳转到预约页面
-      toast("检测到仪表板页面，跳转到预约页面...", "info");
+      toast("log_messages.dashboard_detected_jump_appointment", "info");
       await handleDashboardPage();
       return;
     }
 
     if (isAppointment) {
       // 到达reschedule页面，这是目标页面
-      toast("已到达reschedule页面", "success");
+      toast("log_messages.appointment_page_reached", "success");
 
       // 清除导航流程标记，因为已到达目标页面
       await chrome.storage.local.remove([
@@ -1102,22 +1144,13 @@
 
       const effectiveHasSelectedCenter = effectiveSelectedCenters.length > 0;
 
-      console.log("检查中心选择状态:", {
-        currentlyHasSelectedCenter,
-        currentSelectedCenters,
-        configuredApptCenters: $apptCenters,
-        effectiveSelectedCenters,
-        effectiveHasSelectedCenter,
-        targetIsMonitoring,
-        selectedCentersForTarget,
-        maintainMonitoring,
-      });
+      logI18n("log_messages.checking_center_selection_status", "info");
 
       // 决定下一步操作
       if (targetIsMonitoring || maintainMonitoring) {
         if (effectiveHasSelectedCenter) {
           // 有有效的中心选择（优先使用配置的中心），自动开始监控
-          console.log("有有效的中心选择，自动开始监控");
+          logI18n("log_messages.valid_center_selection_auto_start", "info");
           $apptCenters = effectiveSelectedCenters;
           $apptCenter = effectiveSelectedCenters[0];
 
@@ -1130,9 +1163,9 @@
               "appointments_consulate_appointment_facility_id"
             );
             if (centerSelect) {
-              console.log(
-                `同步页面选择为配置的中心: ${effectiveSelectedCenters[0]}`
-              );
+              logI18n("log_messages.sync_page_selection", "info", {
+                firstConfiguredCenter: effectiveSelectedCenters[0],
+              });
               centerSelect.value = effectiveSelectedCenters[0];
               centerSelect.dispatchEvent(
                 new Event("change", { bubbles: true })
@@ -1144,9 +1177,9 @@
           setTimeout(() => {
             startMonitoring();
             if (maintainMonitoring) {
-              toast("已恢复监控状态", "success");
+              toast("notifications.monitoring_started", "success");
             } else {
-              toast("自动监控已启动", "success");
+              toast("notifications.monitoring_started", "success");
             }
           }, 3000);
         } else if (
@@ -1154,7 +1187,7 @@
           selectedCentersForTarget.length > 0
         ) {
           // 页面未选择中心，但用户在popup中已选择，尝试设置并开始监控
-          console.log("页面未选择中心，但用户已选择，尝试设置中心");
+          logI18n("log_messages.page_no_center_user_selected", "info");
 
           try {
             const centerSelect = document.getElementById(
@@ -1180,42 +1213,44 @@
               // 延迟开始监控
               setTimeout(() => {
                 startMonitoring();
-                toast("已设置预约中心并启动监控", "success");
+                toast("notifications.monitoring_started", "success");
               }, 3000);
             } else {
-              toast("无法设置预约中心，请手动选择", "warning");
+              toast("alerts.fill_credentials", "warning");
             }
           } catch (error) {
-            console.error("设置预约中心失败:", error);
-            toast("设置预约中心失败，请手动选择", "warning");
+            logI18n("log_messages.set_center_failed", "error", {
+              error: error.message,
+            });
+            toast("alerts.operation_failed", "warning");
           }
         } else {
           // 目标是监控但没选择中心，提示用户
-          toast("请选择预约中心后再开始监控", "warning");
+          toast("alerts.select_center", "warning");
         }
       } else {
         // 目标不是监控，只是导航，提示用户手动操作
-        toast("已到达预约页面，请手动操作", "info");
+        toast("notifications.navigating", "info");
       }
       return;
     }
 
     if (isAddressPage) {
       // 处理地址页面，直接跳转到预约页面
-      toast("检测到地址页面，跳转到预约页面...", "info");
+      toast("log_messages.address_page_detected", "info");
       await handleAddressPage();
       return;
     }
 
     if (isConfirmation) {
       // 处理确认页面，返回到预约页面
-      toast("检测到确认页面，返回到预约页面...", "info");
+      toast("log_messages.confirmation_page_detected", "info");
       await handleConfirmationPage();
       return;
     }
 
     // 其他页面类型，尝试通用导航
-    console.log("未识别的页面类型，尝试通用导航");
+    logI18n("log_messages.unrecognized_page_generic_navigation", "info");
     await handleGenericNavigation();
   }
 
@@ -1232,7 +1267,7 @@
 
     if (emailField && passwordField && submitBtn) {
       // 首先尝试触发浏览器自动填充
-      toast("检查浏览器自动填充...", "info");
+      toast("log_messages.browser_auto_fill_check", "info");
 
       // 模拟用户交互来触发自动填充
       emailField.focus();
@@ -1258,16 +1293,18 @@
         emailField.value.trim() !== "" && passwordField.value.trim() !== "";
 
       if (hasAutoFilled) {
-        toast("检测到浏览器自动填充，使用自动填充的凭据", "success");
-        console.log("使用自动填充的凭据:", emailField.value);
+        logI18n("log_messages.auto_fill_detected", "success");
+        logI18n("log_messages.using_auto_filled_credentials", "info", {
+          email: emailField.value,
+        });
       } else {
         // 浏览器没有自动填充，使用存储的凭据
         if (!$username || !$password) {
-          toast("需要设置用户名和密码", "warning");
+          toast("log_messages.need_username_password", "warning");
           return;
         }
 
-        toast("浏览器未自动填充，使用存储的凭据", "info");
+        logI18n("log_messages.no_auto_fill_using_stored", "info");
         emailField.value = $username;
         passwordField.value = $password;
 
@@ -1286,7 +1323,7 @@
       await delay(500);
       submitBtn.click();
 
-      toast("正在登录...", "info");
+      toast("log_messages.signing_in", "info");
     }
   }
 
@@ -1303,7 +1340,7 @@
     );
 
     if (appointmentLinks.length === 0) {
-      toast("未找到预约链接", "error");
+      toast("log_messages.dashboard_no_appointment_links", "error");
       return;
     }
 
@@ -1326,7 +1363,9 @@
       if (linkMatch) {
         $appid = linkMatch[1];
         window.scheduleIdFromPage = $appid;
-        console.log("从仪表板链接获取到 Schedule ID:", $appid);
+        logI18n("log_messages.dashboard_schedule_id_extracted", "info", {
+          scheduleId: $appid,
+        });
       } else {
         // 备用方法：提取所有数字
         $appid = selectedLink.href.replace(/\D/g, "");
@@ -1344,7 +1383,9 @@
           __af: appointmentInfo.fullText,
         });
 
-        toast(`已获取当前预约信息: ${appointmentInfo.fullText}`, "success");
+        toast("log_messages.dashboard_appointment_info_obtained", "success", {
+          fullText: appointmentInfo.fullText,
+        });
       }
 
       // 直接跳转到预约调度页面，而不是地址页面
@@ -1362,7 +1403,9 @@
         appointmentUrl = appointmentUrl.replace(/\/[^\/]*$/, "/appointment");
       }
 
-      toast(`正在跳转到预约页面: ${appointmentUrl}`, "info");
+      toast("log_messages.dashboard_jumping_to_appointment", "info", {
+        url: appointmentUrl,
+      });
       location.href = appointmentUrl;
     }
   }
@@ -1370,7 +1413,7 @@
   // 处理预约页面
   // 处理地址页面
   async function handleAddressPage() {
-    toast("检测到地址页面，正在跳转到预约页面...", "info");
+    toast("log_messages.address_page_detected", "info");
     await delay(500);
 
     // 从当前URL构建预约页面URL
@@ -1383,7 +1426,7 @@
 
   // 处理确认页面
   async function handleConfirmationPage() {
-    toast("在确认页面，返回到预约页面...", "info");
+    toast("log_messages.confirmation_page_detected", "info");
     await delay(2000);
 
     // 从当前URL构建预约页面URL
@@ -1396,7 +1439,7 @@
 
   // 处理通用导航
   async function handleGenericNavigation() {
-    toast("尝试导航到预约页面...", "info");
+    toast("log_messages.generic_navigation_attempt", "info");
 
     // 如果有scheduleId，直接构建预约URL
     const currentScheduleId = getScheduleId();
@@ -1435,27 +1478,29 @@
     if (centerSelect) {
       const pageSelectedCenter = centerSelect.value;
 
-      console.log("页面当前选择的中心:", pageSelectedCenter);
-      console.log("之前配置的中心:", $apptCenter);
-      console.log("之前配置的多中心:", $apptCenters);
+      logI18n("log_messages.center_config_priority", "info", {
+        pageSelectedCenter,
+        apptCenter: $apptCenter,
+        apptCenters: $apptCenters,
+      });
 
       // 如果页面有选择中心，但用户之前没有配置过中心，则保存页面的选择
       if (pageSelectedCenter && (!$apptCenter || $apptCenter.trim() === "")) {
-        console.log("用户之前未配置中心，保存页面当前选择");
+        logI18n("log_messages.save_page_selection", "info");
         $apptCenter = pageSelectedCenter;
         $apptCenters = [pageSelectedCenter];
         await chrome.storage.local.set({ __il: pageSelectedCenter });
       }
       // 如果用户之前已经配置了中心（特别是多中心），保持用户的配置不变
       else if ($apptCenter && $apptCenter.trim() !== "") {
-        console.log("保持用户之前的中心配置，不被页面选择覆盖");
+        logI18n("log_messages.keep_user_config", "info");
         // 可选：如果用户配置了多中心，设置页面选择为第一个中心
         if ($apptCenters && $apptCenters.length > 0) {
           const firstConfiguredCenter = $apptCenters[0];
           if (centerSelect.value !== firstConfiguredCenter) {
-            console.log(
-              `设置页面选择为用户配置的第一个中心: ${firstConfiguredCenter}`
-            );
+            logI18n("log_messages.set_page_to_first_configured", "info", {
+              firstConfiguredCenter,
+            });
             centerSelect.value = firstConfiguredCenter;
             centerSelect.dispatchEvent(new Event("change", { bubbles: true }));
           }
@@ -1463,7 +1508,7 @@
       }
       // 如果页面和配置都没有选择，记录状态但不做操作
       else {
-        console.log("页面和配置都未选择预约中心");
+        logI18n("log_messages.page_and_config_no_selection", "info");
       }
     }
 
@@ -1488,12 +1533,18 @@
       }
     }
 
-    toast(
-      `Reschedule页面已就绪。当前预约日期: ${$apptDate || "未设置"}`,
-      "success"
-    );
-    console.log("Reschedule页面准备完成，等待监控指令");
-    console.log("最终中心配置:", { $apptCenter, $apptCenters });
+    toast("log_messages.reschedule_page_ready", "success", {
+      apptDate:
+        $apptDate ||
+        (isI18nReady && i18n
+          ? i18n.t("status_messages.not_started")
+          : "not set"),
+    });
+    logI18n("log_messages.page_preparation_complete", "info");
+    logI18n("log_messages.final_center_config", "info", {
+      apptCenter: $apptCenter,
+      apptCenters: $apptCenters,
+    });
   }
 
   // 获取预约中心选项
@@ -1535,12 +1586,16 @@
     try {
       // 首先检查是否有配置的中心
       if ($apptCenters && $apptCenters.length > 0) {
-        console.log("检测到配置的预约中心:", $apptCenters);
+        logI18n("log_messages.detected_configured_centers", "info", {
+          centers: $apptCenters,
+        });
         return true;
       }
 
       if ($apptCenter && $apptCenter.trim() !== "") {
-        console.log("检测到单个配置的预约中心:", $apptCenter);
+        logI18n("log_messages.detected_single_configured_center", "info", {
+          center: $apptCenter,
+        });
         return true;
       }
 
@@ -1557,7 +1612,9 @@
       const hasPageSelection =
         centerSelect.value && centerSelect.value.trim() !== "";
       if (hasPageSelection) {
-        console.log("检测到页面选择的预约中心:", centerSelect.value);
+        logI18n("log_messages.detected_page_selected_center", "info", {
+          center: centerSelect.value,
+        });
       }
 
       return hasPageSelection;
@@ -1739,7 +1796,7 @@
 
         // 如果监控上下文超过24小时，清除它
         if (now - context.timestamp > maxAge) {
-          console.log("监控上下文已过期，清除中...");
+          logI18n("log_messages.expired_monitoring_context_cleaned", "info");
           await chrome.storage.local.remove(["__monitoringContext"]);
           return true; // 已清除
         }
@@ -1780,7 +1837,7 @@
     document.body.appendChild(tempDiv);
 
     const result = getCurrentAppointmentInfo();
-    console.log("测试解析结果:", result);
+    logI18n("log_messages.appointment_parsing_test", "info", { result });
 
     document.body.removeChild(tempDiv);
     return result;
