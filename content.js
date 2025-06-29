@@ -28,13 +28,15 @@
   const headers = { "x-requested-with": "XMLHttpRequest" };
 
   const throwNotification = async (title, message) => {
-    if (chrome.notifications) {
-      chrome.notifications.create({
-        type: "basic",
-        iconUrl: chrome.runtime.getURL("icon.png") || "",
+    try {
+      // 通过background script发送通知
+      chrome.runtime.sendMessage({
+        action: "notification",
         title: title,
         message: message,
       });
+    } catch (error) {
+      console.log("发送通知失败:", error);
     }
     console.log(`[NOTIFICATION] ${title}: ${message}`);
   };
