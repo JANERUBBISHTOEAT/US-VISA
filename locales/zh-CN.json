@@ -1,0 +1,122 @@
+{
+    "extension_name": "美签预约监控",
+    "extension_description": "自动监控美国签证预约时间，发现更早预约时自动通知",
+    "ui": {
+        "title": "🇺🇸 美签预约监控",
+        "status": "状态",
+        "start_monitoring": "开始监控",
+        "stop_monitoring": "停止监控",
+        "settings": "设置",
+        "account_settings": "⚙️ 账号设置",
+        "save": "保存",
+        "cancel": "取消",
+        "reset": "重置",
+        "refresh": "刷新",
+        "language": "语言",
+        "close": "关闭"
+    },
+    "form": {
+        "appointment_center": "预约中心",
+        "appointment_center_multi": "预约中心 (可多选)",
+        "appointment_center_help": "按住 Ctrl/Cmd 键可选择多个中心",
+        "check_interval": "检查间隔",
+        "auto_submit": "自动提交预约 (高级功能)",
+        "auto_submit_warning": "⚠️ 开启后发现更早预约时将自动提交表单，请谨慎使用",
+        "visa_type": "签证类型",
+        "username": "用户名 (邮箱)",
+        "password": "密码",
+        "please_select": "请选择预约中心...",
+        "visit_page_first": "请先访问预约页面获取中心选项"
+    },
+    "intervals": {
+        "1_minute": "1 分钟",
+        "2_minutes": "2 分钟",
+        "5_minutes": "5 分钟",
+        "10_minutes": "10 分钟"
+    },
+    "visa_types": {
+        "niv": "非移民签证 (NIV)",
+        "iv": "移民签证 (IV)"
+    },
+    "status_messages": {
+        "not_started": "未启动",
+        "monitoring": "监控中...",
+        "waiting": "等待页面加载...",
+        "not_connected": "未连接",
+        "visit_website": "请先打开美签网站",
+        "pending": "待启动"
+    },
+    "page_types": {
+        "unknown": "未知页面",
+        "login": "登录页面",
+        "dashboard": "仪表板",
+        "appointment": "预约页面",
+        "confirmation": "确认页面",
+        "address": "地址页面",
+        "homepage": "首页"
+    },
+    "info_labels": {
+        "appointment_id": "预约 ID",
+        "location": "地点",
+        "current_appointment": "当前预约",
+        "monitor_status": "监控状态",
+        "auto_submit_status": "自动提交"
+    },
+    "info_values": {
+        "enabled": "开启",
+        "disabled": "关闭"
+    },
+    "tips": {
+        "title": "💡 使用提示:",
+        "step1": "1. 首先在设置中配置账号信息",
+        "step2": "2. 选择一个或多个预约中心后启动监控",
+        "step3": "3. 发现更早预约时会自动填写表单并通知",
+        "step4": "4. 开启\"自动提交\"后会自动完成预约提交",
+        "refresh_tip": "💡 如未看到预约中心选项，请点击\"刷新\"按钮",
+        "simulation_tip": "🚀 多中心监控会随机间隔检查，模拟真人操作",
+        "warning_tip": "⚠️ 自动提交功能请谨慎使用，建议先手动测试",
+        "privacy_title": "🔐 隐私说明:",
+        "privacy_info": "账号信息仅保存在本地，用于自动登录和预约检查",
+        "auto_save_info": "💡 输入信息会自动保存，无需担心切换标签页丢失",
+        "auto_guide_info": "🚀 保存配置后将自动引导完成登录和预约流程"
+    },
+    "notifications": {
+        "monitoring_started": "监控已启动",
+        "monitoring_stopped": "监控已停止",
+        "config_saved": "配置已保存",
+        "extension_reset": "扩展已重置",
+        "centers_updated": "预约中心选项已更新",
+        "update_failed": "更新失败",
+        "found_earlier_appointment": "发现更早预约!",
+        "auto_submitted": "预约已自动提交!",
+        "navigating": "正在自动引导到登录页面...",
+        "all_data_cleared": "所有数据已清除"
+    },
+    "alerts": {
+        "select_center": "请选择至少一个预约中心！",
+        "fill_credentials": "请填写用户名和密码",
+        "use_on_visa_site": "请在美签网站 (ais.usvisa-info.com) 上使用此功能",
+        "open_appointment_page": "请先打开美签预约页面",
+        "confirm_reset": "确定要重置扩展吗？这将清除所有保存的数据。",
+        "connection_failed": "无法连接到页面，请刷新页面后重试",
+        "operation_failed": "操作失败"
+    },
+    "toast_messages": {
+        "checking_centers": "开始检查 {count} 个预约中心...",
+        "checking_center": "检查预约中心 {center} 的可用日期...",
+        "checking_center_failed": "检查中心 {center} 失败: {error}",
+        "all_centers_complete": "所有预约中心检查完成",
+        "found_earlier_date": "🎉 找到更早的预约日期: {date}!",
+        "found_date_not_earlier": "找到日期 {date}，但不早于当前预约 {currentDate}",
+        "no_available_dates": "暂无可用预约日期",
+        "no_dates_in_range": "在指定日期范围内没有可用预约",
+        "no_available_times": "日期 {date} 没有可用时间",
+        "form_filled": "表单已自动填写，请检查并提交",
+        "form_filled_auto_submit": "表单已自动填写，准备自动提交...",
+        "auto_submitting": "正在自动提交预约...",
+        "form_validation_failed": "表单验证失败，请手动检查并提交",
+        "center_not_set": "预约中心未设置",
+        "server_error": "服务器错误 ({status})，将重试...",
+        "auth_failed": "认证失败，请重新登录"
+    }
+}

@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "US Visa Appointment Scheduler",
-    "version": "2.0.0",
-    "description": "Advanced US visa appointment rescheduler with auto-login and monitoring capabilities.",
+    "version": "2.1.0",
+    "description": "Advanced US visa appointment rescheduler with auto-login and monitoring capabilities. Supports multiple languages.",
     "permissions": [
         "scripting",
         "activeTab",
@@ -30,9 +30,20 @@
                 "https://ais.usvisa-info.com/*"
             ],
             "js": [
+                "js/i18n.js",
                 "content.js"
             ],
             "run_at": "document_end"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "locales/*.json"
+            ],
+            "matches": [
+                "https://ais.usvisa-info.com/*"
+            ]
         }
     ],
     "icons": {

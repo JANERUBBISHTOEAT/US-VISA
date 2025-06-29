@@ -17,6 +17,7 @@
         border-radius: 8px;
         padding: 15px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        position: relative;
       }
 
       h3 {
@@ -24,6 +25,7 @@
         color: #2c3e50;
         text-align: center;
         font-size: 18px;
+        margin-top: -10px;
       }
 
       .form-group {
@@ -236,100 +238,191 @@
       .hidden {
         display: none;
       }
+
+      /* 语言选择器样式 */
+      .language-selector {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 1000;
+      }
+
+      .language-selector select {
+        padding: 3px 6px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        font-size: 11px;
+        background: white;
+        cursor: pointer;
+        min-width: 70px;
+      }
+
+      .language-selector select:hover {
+        border-color: #3498db;
+      }
     </style>
   </head>
   <body>
+    <!-- 语言选择器 -->
+    <div class="language-selector">
+      <select id="languageSelect" title="选择语言 / Select Language">
+        <option value="zh-CN">简体中文</option>
+        <option value="zh-TW">繁體中文</option>
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+      </select>
+    </div>
+
     <!-- 主面板 -->
     <div id="mainPanel" class="panel">
-      <h3>🇺🇸 美签预约监控</h3>
+      <h3 data-i18n="ui.title">🇺🇸 美签预约监控</h3>
 
       <div class="form-group">
-        <label for="locationSelect">预约中心 (可多选)</label>
+        <label for="locationSelect" data-i18n="form.appointment_center_multi"
+          >预约中心 (可多选)</label
+        >
         <div class="input-row">
           <select id="locationSelect" multiple size="4">
-            <option value="">请选择预约中心...</option>
+            <option value="" data-i18n="form.please_select">
+              请选择预约中心...
+            </option>
           </select>
-          <button id="refreshCentersBtn" class="btn-secondary btn-refresh">
+          <button
+            id="refreshCentersBtn"
+            class="btn-secondary btn-refresh"
+            data-i18n="ui.refresh"
+          >
             刷新
           </button>
         </div>
-        <small class="help-text">按住 Ctrl/Cmd 键可选择多个中心</small>
+        <small class="help-text" data-i18n="form.appointment_center_help"
+          >按住 Ctrl/Cmd 键可选择多个中心</small
+        >
       </div>
 
       <div class="form-group">
-        <label for="intervalSelect">检查间隔</label>
+        <label for="intervalSelect" data-i18n="form.check_interval"
+          >检查间隔</label
+        >
         <select id="intervalSelect">
-          <option value="1">1 分钟</option>
-          <option value="2" selected>2 分钟</option>
-          <option value="5">5 分钟</option>
-          <option value="10">10 分钟</option>
+          <option value="1" data-i18n="intervals.1_minute">1 分钟</option>
+          <option value="2" selected data-i18n="intervals.2_minutes">
+            2 分钟
+          </option>
+          <option value="5" data-i18n="intervals.5_minutes">5 分钟</option>
+          <option value="10" data-i18n="intervals.10_minutes">10 分钟</option>
         </select>
       </div>
 
       <div class="form-group">
         <label for="autoSubmitToggle">
           <input type="checkbox" id="autoSubmitToggle" />
-          自动提交预约 (高级功能)
+          <span data-i18n="form.auto_submit">自动提交预约 (高级功能)</span>
         </label>
-        <small class="help-text"
+        <small class="help-text" data-i18n="form.auto_submit_warning"
           >⚠️ 开启后发现更早预约时将自动提交表单，请谨慎使用</small
         >
       </div>
 
-      <div id="status" class="status inactive">状态：未启动</div>
+      <div
+        id="status"
+        class="status inactive"
+        data-i18n="status_messages.not_started"
+      >
+        状态：未启动
+      </div>
 
-      <button id="toggleBtn" class="btn-primary">开始监控</button>
-      <button id="configBtn" class="btn-secondary">设置</button>
+      <button
+        id="toggleBtn"
+        class="btn-primary"
+        data-i18n="ui.start_monitoring"
+      >
+        开始监控
+      </button>
+      <button id="configBtn" class="btn-secondary" data-i18n="ui.settings">
+        设置
+      </button>
 
       <div class="info-grid">
         <div class="info-item">
-          <span class="info-label">预约 ID</span>
+          <span class="info-label" data-i18n="info_labels.appointment_id"
+            >预约 ID</span
+          >
           <span id="scheduleDisplay" class="info-value">-</span>
         </div>
         <div class="info-item">
-          <span class="info-label">地点</span>
+          <span class="info-label" data-i18n="info_labels.location">地点</span>
           <span id="locationDisplay" class="info-value">-</span>
         </div>
         <div class="info-item">
-          <span class="info-label">当前预约</span>
+          <span class="info-label" data-i18n="info_labels.current_appointment"
+            >当前预约</span
+          >
           <span id="currentDateDisplay" class="info-value">-</span>
         </div>
         <div class="info-item">
-          <span class="info-label">监控状态</span>
-          <span id="monitorStatus" class="info-value">待启动</span>
+          <span class="info-label" data-i18n="info_labels.monitor_status"
+            >监控状态</span
+          >
+          <span
+            id="monitorStatus"
+            class="info-value"
+            data-i18n="status_messages.pending"
+            >待启动</span
+          >
         </div>
         <div class="info-item">
-          <span class="info-label">自动提交</span>
-          <span id="autoSubmitStatus" class="info-value">关闭</span>
+          <span class="info-label" data-i18n="info_labels.auto_submit_status"
+            >自动提交</span
+          >
+          <span
+            id="autoSubmitStatus"
+            class="info-value"
+            data-i18n="info_values.disabled"
+            >关闭</span
+          >
         </div>
       </div>
 
       <div class="tips">
-        💡 <strong>使用提示:</strong><br />
-        1. 首先在设置中配置账号信息<br />
-        2. 选择一个或多个预约中心后启动监控<br />
-        3. 发现更早预约时会自动填写表单并通知<br />
-        4. 开启"自动提交"后会自动完成预约提交<br />
-        💡 如未看到预约中心选项，请点击"刷新"按钮<br />
-        🚀 多中心监控会随机间隔检查，模拟真人操作<br />
-        ⚠️ 自动提交功能请谨慎使用，建议先手动测试
+        <strong data-i18n="tips.title">💡 使用提示:</strong><br />
+        <span data-i18n="tips.step1">1. 首先在设置中配置账号信息</span><br />
+        <span data-i18n="tips.step2">2. 选择一个或多个预约中心后启动监控</span
+        ><br />
+        <span data-i18n="tips.step3">3. 发现更早预约时会自动填写表单并通知</span
+        ><br />
+        <span data-i18n="tips.step4">4. 开启"自动提交"后会自动完成预约提交</span
+        ><br />
+        <span data-i18n="tips.refresh_tip"
+          >💡 如未看到预约中心选项，请点击"刷新"按钮</span
+        ><br />
+        <span data-i18n="tips.simulation_tip"
+          >🚀 多中心监控会随机间隔检查，模拟真人操作</span
+        ><br />
+        <span data-i18n="tips.warning_tip"
+          >⚠️ 自动提交功能请谨慎使用，建议先手动测试</span
+        >
       </div>
     </div>
 
     <!-- 配置面板 -->
     <div id="configPanel" class="panel hidden">
-      <h3>⚙️ 账号设置</h3>
+      <h3 data-i18n="ui.account_settings">⚙️ 账号设置</h3>
 
       <div class="form-group">
-        <label for="visaTypeSelect">签证类型</label>
+        <label for="visaTypeSelect" data-i18n="form.visa_type">签证类型</label>
         <select id="visaTypeSelect">
-          <option value="niv">非移民签证 (NIV)</option>
-          <option value="iv">移民签证 (IV)</option>
+          <option value="niv" data-i18n="visa_types.niv">
+            非移民签证 (NIV)
+          </option>
+          <option value="iv" data-i18n="visa_types.iv">移民签证 (IV)</option>
         </select>
       </div>
 
       <div class="form-group">
-        <label for="usernameInput">用户名 (邮箱)</label>
+        <label for="usernameInput" data-i18n="form.username"
+          >用户名 (邮箱)</label
+        >
         <input
           type="email"
           id="usernameInput"
@@ -338,25 +431,46 @@
       </div>
 
       <div class="form-group">
-        <label for="passwordInput">密码</label>
-        <input type="password" id="passwordInput" placeholder="输入密码" />
+        <label for="passwordInput" data-i18n="form.password">密码</label>
+        <input
+          type="password"
+          id="passwordInput"
+          data-i18n-placeholder="form.password"
+        />
       </div>
 
       <div class="button-row">
-        <button id="saveConfigBtn" class="btn-success">保存设置</button>
-        <button id="cancelConfigBtn" class="btn-secondary">取消</button>
+        <button id="saveConfigBtn" class="btn-success" data-i18n="ui.save">
+          保存设置
+        </button>
+        <button
+          id="cancelConfigBtn"
+          class="btn-secondary"
+          data-i18n="ui.cancel"
+        >
+          取消
+        </button>
       </div>
 
-      <button id="resetBtn" class="btn-danger btn-reset">重置扩展</button>
+      <button id="resetBtn" class="btn-danger btn-reset" data-i18n="ui.reset">
+        重置扩展
+      </button>
 
       <div class="tips">
-        🔐 <strong>隐私说明:</strong><br />
-        账号信息仅保存在本地，用于自动登录和预约检查<br />
-        💡 输入信息会自动保存，无需担心切换标签页丢失<br />
-        🚀 保存配置后将自动引导完成登录和预约流程
+        <strong data-i18n="tips.privacy_title">🔐 隐私说明:</strong><br />
+        <span data-i18n="tips.privacy_info"
+          >账号信息仅保存在本地，用于自动登录和预约检查</span
+        ><br />
+        <span data-i18n="tips.auto_save_info"
+          >💡 输入信息会自动保存，无需担心切换标签页丢失</span
+        ><br />
+        <span data-i18n="tips.auto_guide_info"
+          >🚀 保存配置后将自动引导完成登录和预约流程</span
+        >
       </div>
     </div>
 
+    <script src="js/i18n.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

@@ -1,0 +1,122 @@
+{
+    "extension_name": "Moniteur de Rendez-vous Visa US",
+    "extension_description": "Surveille automatiquement la disponibilité des rendez-vous de visa américain et notifie quand des créneaux plus tôt sont trouvés",
+    "ui": {
+        "title": "🇺🇸 Moniteur Visa US",
+        "status": "Statut",
+        "start_monitoring": "Démarrer Surveillance",
+        "stop_monitoring": "Arrêter Surveillance",
+        "settings": "Paramètres",
+        "account_settings": "⚙️ Paramètres du Compte",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "reset": "Réinitialiser",
+        "refresh": "Actualiser",
+        "language": "Langue",
+        "close": "Fermer"
+    },
+    "form": {
+        "appointment_center": "Centre de Rendez-vous",
+        "appointment_center_multi": "Centres de Rendez-vous (Multi-sélection)",
+        "appointment_center_help": "Maintenez Ctrl/Cmd pour sélectionner plusieurs centres",
+        "check_interval": "Intervalle de Vérification",
+        "auto_submit": "Soumission Automatique (Avancé)",
+        "auto_submit_warning": "⚠️ Quand activé, le formulaire sera automatiquement soumis quand un rendez-vous plus tôt est trouvé. Utilisez avec prudence",
+        "visa_type": "Type de Visa",
+        "username": "Nom d'utilisateur (Email)",
+        "password": "Mot de passe",
+        "please_select": "Veuillez sélectionner un centre de rendez-vous...",
+        "visit_page_first": "Veuillez d'abord visiter la page de rendez-vous pour obtenir les options de centre"
+    },
+    "intervals": {
+        "1_minute": "1 Minute",
+        "2_minutes": "2 Minutes",
+        "5_minutes": "5 Minutes",
+        "10_minutes": "10 Minutes"
+    },
+    "visa_types": {
+        "niv": "Visa Non-immigrant (NIV)",
+        "iv": "Visa Immigrant (IV)"
+    },
+    "status_messages": {
+        "not_started": "Non Démarré",
+        "monitoring": "Surveillance...",
+        "waiting": "En attente du chargement de la page...",
+        "not_connected": "Non Connecté",
+        "visit_website": "Veuillez d'abord ouvrir le site web du visa américain",
+        "pending": "En Attente"
+    },
+    "page_types": {
+        "unknown": "Page Inconnue",
+        "login": "Page de Connexion",
+        "dashboard": "Tableau de Bord",
+        "appointment": "Page de Rendez-vous",
+        "confirmation": "Page de Confirmation",
+        "address": "Page d'Adresse",
+        "homepage": "Page d'Accueil"
+    },
+    "info_labels": {
+        "appointment_id": "ID Rendez-vous",
+        "location": "Lieu",
+        "current_appointment": "Rendez-vous Actuel",
+        "monitor_status": "Statut Surveillance",
+        "auto_submit_status": "Soumission Auto"
+    },
+    "info_values": {
+        "enabled": "Activé",
+        "disabled": "Désactivé"
+    },
+    "tips": {
+        "title": "💡 Conseils d'Utilisation:",
+        "step1": "1. Configurez d'abord les informations de compte dans les paramètres",
+        "step2": "2. Sélectionnez un ou plusieurs centres de rendez-vous et démarrez la surveillance",
+        "step3": "3. Quand un rendez-vous plus tôt est trouvé, le formulaire sera auto-rempli et vous serez notifié",
+        "step4": "4. Activez \"Soumission Auto\" pour compléter automatiquement la soumission du rendez-vous",
+        "refresh_tip": "💡 Si vous ne voyez pas les options de centre de rendez-vous, cliquez sur \"Actualiser\"",
+        "simulation_tip": "🚀 La surveillance multi-centres utilise des intervalles aléatoires pour simuler le comportement humain",
+        "warning_tip": "⚠️ Utilisez la fonction de soumission automatique avec prudence, testez manuellement d'abord",
+        "privacy_title": "🔐 Avis de Confidentialité:",
+        "privacy_info": "Les informations de compte sont stockées localement uniquement, utilisées pour la connexion automatique et la vérification des rendez-vous",
+        "auto_save_info": "💡 Vos saisies sont sauvegardées automatiquement, pas besoin de s'inquiéter de perdre des données lors du changement d'onglets",
+        "auto_guide_info": "🚀 Après avoir enregistré la configuration, l'extension vous guidera automatiquement à travers le processus de connexion et de rendez-vous"
+    },
+    "notifications": {
+        "monitoring_started": "Surveillance Démarrée",
+        "monitoring_stopped": "Surveillance Arrêtée",
+        "config_saved": "Configuration Enregistrée",
+        "extension_reset": "Extension Réinitialisée",
+        "centers_updated": "Centres de Rendez-vous Mis à Jour",
+        "update_failed": "Mise à Jour Échouée",
+        "found_earlier_appointment": "Rendez-vous Plus Tôt Trouvé!",
+        "auto_submitted": "Rendez-vous Auto-Soumis!",
+        "navigating": "Navigation automatique vers la page de connexion...",
+        "all_data_cleared": "Toutes les données effacées"
+    },
+    "alerts": {
+        "select_center": "Veuillez sélectionner au moins un centre de rendez-vous!",
+        "fill_credentials": "Veuillez remplir le nom d'utilisateur et le mot de passe",
+        "use_on_visa_site": "Veuillez utiliser cette fonction sur le site web du visa américain (ais.usvisa-info.com)",
+        "open_appointment_page": "Veuillez d'abord ouvrir la page de rendez-vous de visa américain",
+        "confirm_reset": "Êtes-vous sûr de vouloir réinitialiser l'extension? Ceci effacera toutes les données sauvegardées.",
+        "connection_failed": "Impossible de se connecter à la page, veuillez actualiser et réessayer",
+        "operation_failed": "Opération échouée"
+    },
+    "toast_messages": {
+        "checking_centers": "Démarrage de la vérification de {count} centres de rendez-vous...",
+        "checking_center": "Vérification des dates disponibles pour le centre de rendez-vous {center}...",
+        "checking_center_failed": "Échec de la vérification du centre {center}: {error}",
+        "all_centers_complete": "Vérification de tous les centres de rendez-vous terminée",
+        "found_earlier_date": "🎉 Date de rendez-vous plus tôt trouvée: {date}!",
+        "found_date_not_earlier": "Date trouvée {date}, mais pas plus tôt que le rendez-vous actuel {currentDate}",
+        "no_available_dates": "Aucune date de rendez-vous disponible",
+        "no_dates_in_range": "Aucun rendez-vous disponible dans la plage de dates spécifiée",
+        "no_available_times": "Aucun horaire disponible pour la date {date}",
+        "form_filled": "Formulaire auto-rempli, veuillez vérifier et soumettre",
+        "form_filled_auto_submit": "Formulaire auto-rempli, préparation de la soumission automatique...",
+        "auto_submitting": "Soumission automatique du rendez-vous...",
+        "form_validation_failed": "Échec de la validation du formulaire, veuillez vérifier et soumettre manuellement",
+        "center_not_set": "Centre de rendez-vous non défini",
+        "server_error": "Erreur serveur ({status}), nouvelle tentative...",
+        "auth_failed": "Échec de l'authentification, veuillez vous reconnecter"
+    }
+}

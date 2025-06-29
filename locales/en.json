@@ -1,0 +1,122 @@
+{
+    "extension_name": "US Visa Appointment Monitor",
+    "extension_description": "Automatically monitor US visa appointment availability and notify when earlier slots are found",
+    "ui": {
+        "title": "🇺🇸 US Visa Monitor",
+        "status": "Status",
+        "start_monitoring": "Start Monitoring",
+        "stop_monitoring": "Stop Monitoring",
+        "settings": "Settings",
+        "account_settings": "⚙️ Account Settings",
+        "save": "Save",
+        "cancel": "Cancel",
+        "reset": "Reset",
+        "refresh": "Refresh",
+        "language": "Language",
+        "close": "Close"
+    },
+    "form": {
+        "appointment_center": "Appointment Center",
+        "appointment_center_multi": "Appointment Centers (Multi-select)",
+        "appointment_center_help": "Hold Ctrl/Cmd to select multiple centers",
+        "check_interval": "Check Interval",
+        "auto_submit": "Auto Submit Appointment (Advanced)",
+        "auto_submit_warning": "⚠️ When enabled, the form will be automatically submitted when an earlier appointment is found. Use with caution",
+        "visa_type": "Visa Type",
+        "username": "Username (Email)",
+        "password": "Password",
+        "please_select": "Please select appointment center...",
+        "visit_page_first": "Please visit appointment page first to get center options"
+    },
+    "intervals": {
+        "1_minute": "1 Minute",
+        "2_minutes": "2 Minutes",
+        "5_minutes": "5 Minutes",
+        "10_minutes": "10 Minutes"
+    },
+    "visa_types": {
+        "niv": "Non-immigrant Visa (NIV)",
+        "iv": "Immigrant Visa (IV)"
+    },
+    "status_messages": {
+        "not_started": "Not Started",
+        "monitoring": "Monitoring...",
+        "waiting": "Waiting for page to load...",
+        "not_connected": "Not Connected",
+        "visit_website": "Please open US Visa website first",
+        "pending": "Pending"
+    },
+    "page_types": {
+        "unknown": "Unknown Page",
+        "login": "Login Page",
+        "dashboard": "Dashboard",
+        "appointment": "Appointment Page",
+        "confirmation": "Confirmation Page",
+        "address": "Address Page",
+        "homepage": "Homepage"
+    },
+    "info_labels": {
+        "appointment_id": "Appointment ID",
+        "location": "Location",
+        "current_appointment": "Current Appointment",
+        "monitor_status": "Monitor Status",
+        "auto_submit_status": "Auto Submit"
+    },
+    "info_values": {
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+    },
+    "tips": {
+        "title": "💡 Usage Tips:",
+        "step1": "1. First configure account info in settings",
+        "step2": "2. Select one or more appointment centers and start monitoring",
+        "step3": "3. When earlier appointment is found, form will be auto-filled and you'll be notified",
+        "step4": "4. Enable \"Auto Submit\" to automatically complete appointment submission",
+        "refresh_tip": "💡 If you don't see appointment center options, click \"Refresh\" button",
+        "simulation_tip": "🚀 Multi-center monitoring uses random intervals to simulate human behavior",
+        "warning_tip": "⚠️ Use auto-submit feature carefully, test manually first",
+        "privacy_title": "🔐 Privacy Notice:",
+        "privacy_info": "Account information is stored locally only, used for auto-login and appointment checking",
+        "auto_save_info": "💡 Your input is auto-saved, no need to worry about losing data when switching tabs",
+        "auto_guide_info": "🚀 After saving configuration, the extension will automatically guide you through login and appointment process"
+    },
+    "notifications": {
+        "monitoring_started": "Monitoring Started",
+        "monitoring_stopped": "Monitoring Stopped",
+        "config_saved": "Configuration Saved",
+        "extension_reset": "Extension Reset",
+        "centers_updated": "Appointment Centers Updated",
+        "update_failed": "Update Failed",
+        "found_earlier_appointment": "Earlier Appointment Found!",
+        "auto_submitted": "Appointment Auto-Submitted!",
+        "navigating": "Auto-navigating to login page...",
+        "all_data_cleared": "All data cleared"
+    },
+    "alerts": {
+        "select_center": "Please select at least one appointment center!",
+        "fill_credentials": "Please fill in username and password",
+        "use_on_visa_site": "Please use this feature on US Visa website (ais.usvisa-info.com)",
+        "open_appointment_page": "Please open US Visa appointment page first",
+        "confirm_reset": "Are you sure you want to reset the extension? This will clear all saved data.",
+        "connection_failed": "Cannot connect to page, please refresh and try again",
+        "operation_failed": "Operation failed"
+    },
+    "toast_messages": {
+        "checking_centers": "Starting to check {count} appointment centers...",
+        "checking_center": "Checking available dates for appointment center {center}...",
+        "checking_center_failed": "Failed to check center {center}: {error}",
+        "all_centers_complete": "All appointment centers check completed",
+        "found_earlier_date": "🎉 Found earlier appointment date: {date}!",
+        "found_date_not_earlier": "Found date {date}, but not earlier than current appointment {currentDate}",
+        "no_available_dates": "No available appointment dates",
+        "no_dates_in_range": "No available appointments in specified date range",
+        "no_available_times": "No available times for date {date}",
+        "form_filled": "Form auto-filled, please review and submit",
+        "form_filled_auto_submit": "Form auto-filled, preparing auto-submit...",
+        "auto_submitting": "Auto-submitting appointment...",
+        "form_validation_failed": "Form validation failed, please check and submit manually",
+        "center_not_set": "Appointment center not set",
+        "server_error": "Server error ({status}), will retry...",
+        "auth_failed": "Authentication failed, please login again"
+    }
+}

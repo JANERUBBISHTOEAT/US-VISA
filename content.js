@@ -1,4 +1,69 @@
 (async function (page) {
+  // 全局国际化对象
+  let i18n = null;
+  let isI18nReady = false;
+
+  // 初始化国际化
+  async function initI18n() {
+    try {
+      // 动态加载i18n.js
+      if (typeof window.i18n === "undefined") {
+        const script = document.createElement("script");
+        script.src = chrome.runtime.getURL("js/i18n.js");
+        document.head.appendChild(script);
+
+        // 等待脚本加载
+        await new Promise((resolve) => {
+          script.onload = resolve;
+        });
+      }
+
+      i18n = new I18n();
+      await i18n.init();
+      isI18nReady = true;
+      console.log("Content script 国际化初始化完成");
+    } catch (error) {
+      console.error("Content script 国际化初始化失败:", error);
+      isI18nReady = false;
+    }
+  }
+
+  // 带国际化的toast函数
+  const toast = (messageKey, type = "info", params = {}) => {
+    let message;
+    if (isI18nReady && i18n) {
+      message = i18n.t(messageKey, params);
+    } else {
+      message = messageKey; // 回退到原始文本
+    }
+    console.log(`[VISA-CHECKER ${type.toUpperCase()}]:`, message);
+    // 可以添加更好的通知显示
+  };
+
+  // 带国际化的通知函数
+  const throwNotification = async (titleKey, messageKey, params = {}) => {
+    let title, message;
+    if (isI18nReady && i18n) {
+      title = i18n.t(titleKey, params);
+      message = i18n.t(messageKey, params);
+    } else {
+      title = titleKey;
+      message = messageKey;
+    }
+
+    try {
+      // 通过background script发送通知
+      chrome.runtime.sendMessage({
+        action: "notification",
+        title: title,
+        message: message,
+      });
+    } catch (error) {
+      console.log("发送通知失败:", error);
+    }
+    console.log(`[NOTIFICATION] ${title}: ${message}`);
+  };
+
   // 核心配置变量
   let $username = null,
     $password = null,
@@ -23,26 +88,7 @@
   const delay = async ($delay = 2000) =>
     await new Promise((r) => setTimeout(r, $delay));
 
-  const toast = (html, type = "info") => {
-    console.log(`[VISA-CHECKER ${type.toUpperCase()}]:`, html);
-    // 可以添加更好的通知显示
-  };
-
   const headers = { "x-requested-with": "XMLHttpRequest" };
-
-  const throwNotification = async (title, message) => {
-    try {
-      // 通过background script发送通知
-      chrome.runtime.sendMessage({
-        action: "notification",
-        title: title,
-        message: message,
-      });
-    } catch (error) {
-      console.log("发送通知失败:", error);
-    }
-    console.log(`[NOTIFICATION] ${title}: ${message}`);
-  };
 
   // 日期验证函数
   const dateValidityCheck = (start, end, checkDate) => {
@@ -104,16 +150,19 @@
   // 核心预约检查函数 - 支持多中心
   async function checkMultipleCenters($centers, $ascCenter) {
     if (!$centers || $centers.length === 0) {
-      toast("未设置预约中心", "error");
+      toast("toast_messages.center_not_set", "error");
       return;
     }
 
-    toast(`开始检查 ${$centers.length} 个预约中心...`, "info");
+    toast("toast_messages.checking_centers", "info", {
+      count: $centers.length,
+    });
 
     for (let i = 0; i < $centers.length; i++) {
       const center = $centers[i];
 
       try {
+        toast("toast_messages.checking_center", "info", { center: center });
         await getNewDate(0, center, $ascCenter);
 
         // 在检查不同中心之间添加随机延迟 (2-5秒)
@@ -122,24 +171,27 @@
         }
       } catch (error) {
         console.error(`检查中心 ${center} 时出错:`, error);
-        toast(`检查中心 ${center} 失败: ${error.message}`, "error");
+        toast("toast_messages.checking_center_failed", "error", {
+          center: center,
+          error: error.message,
+        });
       }
     }
 
-    toast("所有预约中心检查完成", "info");
+    toast("toast_messages.all_centers_complete", "info");
   }
 
   // 核心预约检查函数
   async function getNewDate($delay, $center, $ascCenter) {
     try {
       if (!$center) {
-        toast("预约中心未设置", "error");
+        toast("toast_messages.center_not_set", "error");
         return;
       }
 
       const appointmentUrl = `${page}/days/${$center}.json?appointments[expedite]=false`;
 
-      toast(`检查预约中心 ${$center} 的可用日期...`);
+      toast("toast_messages.checking_center", "info", { center: $center });
 
       const response = await fetch(appointmentUrl, {
         headers,
@@ -148,7 +200,9 @@
 
       if (!response.ok) {
         if (response.status >= 500) {
-          toast(`服务器错误 (${response.status})，将重试...`, "warning");
+          toast("toast_messages.server_error", "warning", {
+            status: response.status,
+          });
           return;
         }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -157,7 +211,7 @@
       const $dates = await response.json();
 
       if (!Array.isArray($dates) || $dates.length === 0) {
-        toast("暂无可用预约日期");
+        toast("toast_messages.no_available_dates");
         return;
       }
 
@@ -168,7 +222,7 @@
         .sort((a, b) => new Date(a) - new Date(b));
 
       if (availableDates.length === 0) {
-        toast("在指定日期范围内没有可用预约");
+        toast("toast_messages.no_dates_in_range");
         return;
       }
 
@@ -176,11 +230,16 @@
 
       // 检查是否比当前预约更早
       if ($apptDate && new Date(latestDate) >= new Date($apptDate)) {
-        toast(`找到日期 ${latestDate}，但不早于当前预约 ${$apptDate}`);
+        toast("toast_messages.found_date_not_earlier", "info", {
+          date: latestDate,
+          currentDate: $apptDate,
+        });
         return;
       }
 
-      toast(`🎉 找到更早的预约日期: ${latestDate}!`, "success");
+      toast("toast_messages.found_earlier_date", "success", {
+        date: latestDate,
+      });
 
       // 获取该日期的可用时间
       const timesUrl = `${page}/times/${$center}.json?date=${latestDate}&appointments[expedite]=false`;
@@ -193,7 +252,9 @@
       const $times = await timesResponse.json();
 
       if (!$times.available_times || $times.available_times.length === 0) {
-        toast(`日期 ${latestDate} 没有可用时间`, "warning");
+        toast("toast_messages.no_available_times", "warning", {
+          date: latestDate,
+        });
         return;
       }
 
@@ -214,17 +275,17 @@
 
       // 发送通知
       await throwNotification(
-        "发现更早预约!",
-        `找到 ${latestDate} ${selectedTime} 的预约。请尽快确认！`
+        "notifications.found_earlier_appointment",
+        "notifications.found_earlier_appointment"
       );
     } catch (error) {
       console.error("检查预约时出错:", error);
-      toast(`检查预约失败: ${error.message}`, "error");
+      toast("toast_messages.auth_failed", "error");
 
       // 如果是认证错误，停止检查
       if (error.message.includes("401") || error.message.includes("403")) {
         stopMonitoring();
-        toast("认证失败，请重新登录", "error");
+        toast("toast_messages.auth_failed", "error");
       }
     }
   }
@@ -263,34 +324,34 @@
 
         if ($autoSubmit) {
           // 自动提交模式
-          toast("表单已自动填写，准备自动提交...", "success");
+          toast("toast_messages.form_filled_auto_submit", "success");
 
           // 等待随机延迟后自动提交
           await randomDelay(3000, 2000); // 3-5秒随机延迟
 
           // 最后一次验证表单
           if (validateForm()) {
-            toast("正在自动提交预约...", "info");
+            toast("toast_messages.auto_submitting", "info");
             submitBtn.click();
 
             // 停止监控，避免重复提交
             stopMonitoring();
 
             await throwNotification(
-              "预约已自动提交!",
-              `${date} ${time} 的预约已成功提交，请检查确认页面`
+              "notifications.auto_submitted",
+              "notifications.auto_submitted"
             );
           } else {
-            toast("表单验证失败，请手动检查并提交", "warning");
+            toast("toast_messages.form_validation_failed", "warning");
           }
         } else {
           // 手动提交模式
-          toast("表单已自动填写，请检查并提交", "success");
+          toast("toast_messages.form_filled", "success");
         }
       }
     } catch (error) {
       console.error("填写表单时出错:", error);
-      toast(`填写表单失败: ${error.message}`, "error");
+      toast("toast_messages.form_validation_failed", "error");
     }
   }
 
@@ -561,7 +622,7 @@
     if ($checkInterval) return;
 
     $active = true;
-    toast("开始监控预约...", "success");
+    toast("notifications.monitoring_started", "success");
 
     // 立即检查一次
     if ($apptCenters.length > 0) {
@@ -608,7 +669,7 @@
     }
 
     $active = false;
-    toast("已停止监控", "info");
+    toast("notifications.monitoring_stopped", "info");
 
     chrome.storage.local.set({ __active: false });
   }
@@ -1059,9 +1120,15 @@
 
   // 启动初始化
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", async () => {
+      await initI18n();
+      init();
+    });
   } else {
-    init();
+    (async () => {
+      await initI18n();
+      init();
+    })();
   }
 
   // 测试预约信息解析（开发阶段使用）

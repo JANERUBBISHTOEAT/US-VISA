@@ -1,8 +1,12 @@
 let isRunning = false;
 let currentTab = null;
 
+// 国际化相关变量
+let isI18nReady = false;
+
 // 初始化页面
 document.addEventListener("DOMContentLoaded", async () => {
+  await initializeI18n();
   await loadCurrentStatus();
   await loadDefaultSettings();
   setupEventListeners();
@@ -10,6 +14,148 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 尝试加载预约中心选项
   await refreshAppointmentCenters();
 });
+
+// 初始化国际化
+async function initializeI18n() {
+  try {
+    await i18n.init();
+    isI18nReady = true;
+
+    // 设置语言选择器的当前值
+    document.getElementById("languageSelect").value = i18n.getCurrentLanguage();
+
+    // 更新所有文本
+    updateAllTexts();
+
+    console.log("国际化初始化完成，当前语言:", i18n.getCurrentLanguage());
+  } catch (error) {
+    console.error("国际化初始化失败:", error);
+    isI18nReady = false;
+  }
+}
+
+// 更新所有文本
+function updateAllTexts() {
+  if (!isI18nReady) return;
+
+  // 更新所有带有 data-i18n 属性的元素
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    const key = element.getAttribute("data-i18n");
+    const params = element.getAttribute("data-i18n-params");
+
+    let translatedText;
+    if (params) {
+      try {
+        const parsedParams = JSON.parse(params);
+        translatedText = i18n.t(key, parsedParams);
+      } catch (error) {
+        translatedText = i18n.t(key);
+      }
+    } else {
+      translatedText = i18n.t(key);
+    }
+
+    element.textContent = translatedText;
+  });
+
+  // 更新特殊元素
+  updateSpecialElements();
+}
+
+// 更新特殊元素（如选项、占位符等）
+function updateSpecialElements() {
+  if (!isI18nReady) return;
+
+  // 更新语言选择器的标题
+  const langSelect = document.getElementById("languageSelect");
+  if (langSelect) {
+    langSelect.title = i18n.t("form.language") + " / Select Language";
+  }
+
+  // 更新选项文本
+  updateSelectOptions();
+
+  // 更新占位符
+  updatePlaceholders();
+
+  // 更新按钮文本
+  updateButtons();
+}
+
+// 更新选项文本
+function updateSelectOptions() {
+  if (!isI18nReady) return;
+
+  // 更新检查间隔选项
+  const intervalSelect = document.getElementById("intervalSelect");
+  if (intervalSelect) {
+    const options = intervalSelect.querySelectorAll("option");
+    options.forEach((option) => {
+      const value = option.value;
+      const key = `intervals.${value}_minute${value === "1" ? "" : "s"}`;
+      option.textContent = i18n.t(key);
+    });
+  }
+
+  // 更新签证类型选项
+  const visaTypeSelect = document.getElementById("visaTypeSelect");
+  if (visaTypeSelect) {
+    const options = visaTypeSelect.querySelectorAll("option");
+    options.forEach((option) => {
+      const value = option.value;
+      option.textContent = i18n.t(`visa_types.${value}`);
+    });
+  }
+
+  // 更新预约中心的默认选项
+  const locationSelect = document.getElementById("locationSelect");
+  if (locationSelect) {
+    const defaultOption = locationSelect.querySelector('option[value=""]');
+    if (defaultOption) {
+      defaultOption.textContent = i18n.t("form.please_select");
+    }
+  }
+}
+
+// 更新占位符
+function updatePlaceholders() {
+  if (!isI18nReady) return;
+
+  // 更新所有带有 data-i18n-placeholder 属性的元素占位符
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+    const key = element.getAttribute("data-i18n-placeholder");
+    element.placeholder = i18n.t(key);
+  });
+
+  // 特殊处理用户名输入框（保持固定格式）
+  const usernameInput = document.getElementById("usernameInput");
+  if (usernameInput) {
+    usernameInput.placeholder = "your-email@example.com";
+  }
+}
+
+// 更新按钮文本
+function updateButtons() {
+  if (!isI18nReady) return;
+
+  // 主要按钮会根据状态动态更新，在updateUI中处理
+
+  // 配置面板按钮
+  const configBtn = document.getElementById("configBtn");
+  if (configBtn) configBtn.textContent = i18n.t("ui.settings");
+
+  const saveConfigBtn = document.getElementById("saveConfigBtn");
+  if (saveConfigBtn) saveConfigBtn.textContent = i18n.t("ui.save");
+
+  const cancelConfigBtn = document.getElementById("cancelConfigBtn");
+  if (cancelConfigBtn) cancelConfigBtn.textContent = i18n.t("ui.cancel");
+
+  const resetBtn = document.getElementById("resetBtn");
+  if (resetBtn) resetBtn.textContent = i18n.t("ui.reset");
+
+  const refreshBtn = document.getElementById("refreshCentersBtn");
+  if (refreshBtn) refreshBtn.textContent = i18n.t("ui.refresh");
+}
 
 // 加载默认设置
 async function loadDefaultSettings() {
@@ -50,6 +196,17 @@ function setupEventListeners() {
     .getElementById("cancelConfigBtn")
     .addEventListener("click", hideConfig);
   document.getElementById("resetBtn").addEventListener("click", resetExtension);
+
+  // 语言切换
+  document
+    .getElementById("languageSelect")
+    .addEventListener("change", async function (e) {
+      const selectedLanguage = e.target.value;
+      if (await i18n.setLanguage(selectedLanguage)) {
+        updateAllTexts();
+        console.log("语言已切换到:", selectedLanguage);
+      }
+    });
 
   // 预约中心刷新按钮
   document
@@ -117,7 +274,10 @@ async function loadCurrentStatus() {
 
     // 检查是否在美签网站
     if (!tab.url || !tab.url.includes("ais.usvisa-info.com")) {
-      document.getElementById("status").textContent = "状态：请先打开美签网站";
+      const statusText = isI18nReady
+        ? i18n.t("status_messages.visit_website")
+        : "状态：请先打开美签网站";
+      document.getElementById("status").textContent = statusText;
       return;
     }
 
@@ -130,11 +290,17 @@ async function loadCurrentStatus() {
       if (response) {
         updateUI(response);
       } else {
-        document.getElementById("status").textContent = "状态：等待页面加载...";
+        const statusText = isI18nReady
+          ? i18n.t("status_messages.waiting")
+          : "状态：等待页面加载...";
+        document.getElementById("status").textContent = statusText;
       }
     } catch (msgError) {
       console.log("无法连接到content script，可能页面还在加载");
-      document.getElementById("status").textContent = "状态：等待页面加载...";
+      const statusText = isI18nReady
+        ? i18n.t("status_messages.waiting")
+        : "状态：等待页面加载...";
+      document.getElementById("status").textContent = statusText;
 
       // 等待一段时间后重试
       setTimeout(async () => {
@@ -152,7 +318,10 @@ async function loadCurrentStatus() {
     }
   } catch (error) {
     console.error("加载状态失败:", error);
-    document.getElementById("status").textContent = "状态：未连接";
+    const statusText = isI18nReady
+      ? i18n.t("status_messages.not_connected")
+      : "状态：未连接";
+    document.getElementById("status").textContent = statusText;
   }
 }
 
@@ -160,12 +329,24 @@ async function loadCurrentStatus() {
 function updateUI(status) {
   isRunning = status.active || false;
 
-  document.getElementById("status").textContent = isRunning
-    ? "状态：监控中..."
-    : "状态：未启动";
-  document.getElementById("toggleBtn").textContent = isRunning
-    ? "停止监控"
-    : "开始监控";
+  // 使用国际化的状态文本
+  if (isI18nReady) {
+    document.getElementById("status").textContent = isRunning
+      ? i18n.t("status_messages.monitoring")
+      : i18n.t("status_messages.not_started");
+    document.getElementById("toggleBtn").textContent = isRunning
+      ? i18n.t("ui.stop_monitoring")
+      : i18n.t("ui.start_monitoring");
+  } else {
+    // 回退到默认文本
+    document.getElementById("status").textContent = isRunning
+      ? "状态：监控中..."
+      : "状态：未启动";
+    document.getElementById("toggleBtn").textContent = isRunning
+      ? "停止监控"
+      : "开始监控";
+  }
+
   document.getElementById("scheduleDisplay").textContent =
     status.scheduleId || "-";
 
@@ -215,9 +396,22 @@ function updateUI(status) {
   document.getElementById("currentDateDisplay").textContent =
     status.apptDate || "-";
 
-  // 显示页面状态
-  let pageStatus = "未知页面";
-  if (status.currentPage) {
+  // 显示页面状态（使用国际化）
+  let pageStatus = isI18nReady ? i18n.t("page_types.unknown") : "未知页面";
+  if (status.currentPage && isI18nReady) {
+    if (status.currentPage.isSignIn) pageStatus = i18n.t("page_types.login");
+    else if (status.currentPage.isDashboard)
+      pageStatus = i18n.t("page_types.dashboard");
+    else if (status.currentPage.isAppointment)
+      pageStatus = i18n.t("page_types.appointment");
+    else if (status.currentPage.isConfirmation)
+      pageStatus = i18n.t("page_types.confirmation");
+    else if (status.currentPage.isAddressPage)
+      pageStatus = i18n.t("page_types.address");
+    else if (status.currentPage.isLoggedOut)
+      pageStatus = i18n.t("page_types.homepage");
+  } else if (status.currentPage) {
+    // 回退到中文
     if (status.currentPage.isSignIn) pageStatus = "登录页面";
     else if (status.currentPage.isDashboard) pageStatus = "仪表板";
     else if (status.currentPage.isAppointment) pageStatus = "预约页面";
@@ -228,16 +422,22 @@ function updateUI(status) {
 
   document.getElementById("monitorStatus").textContent = pageStatus;
 
-  // 更新自动提交状态显示
-  const autoSubmitStatus = status.autoSubmit ? "开启" : "关闭";
+  // 更新自动提交状态显示（使用国际化）
+  const autoSubmitStatus = isI18nReady
+    ? status.autoSubmit
+      ? i18n.t("info_values.enabled")
+      : i18n.t("info_values.disabled")
+    : status.autoSubmit
+    ? "开启"
+    : "关闭";
   document.getElementById("autoSubmitStatus").textContent = autoSubmitStatus;
   document.getElementById("autoSubmitStatus").style.color = status.autoSubmit
     ? "#e74c3c"
     : "#27ae60";
 
   // 更新签证类型显示
-  if (status.visaType) {
-    const visaTypeText = status.visaType === "niv" ? "非移民签证" : "移民签证";
+  if (status.visaType && isI18nReady) {
+    const visaTypeText = i18n.t(`visa_types.${status.visaType}`);
     console.log("当前签证类型:", visaTypeText);
   }
 }
@@ -292,8 +492,8 @@ async function toggleMonitoring() {
             selectedTexts.join(", ");
 
           showNotification(
-            "监控已启动",
-            `正在监控 ${selectedValues.length} 个中心，检查间隔 ${intervalMinutes} 分钟`
+            "notifications.monitoring_started",
+            "notifications.monitoring_started"
           );
         } else {
           alert("启动监控失败，请确保在正确的页面");
@@ -314,7 +514,10 @@ async function toggleMonitoring() {
           document.getElementById("status").textContent = "状态：未启动";
           document.getElementById("toggleBtn").textContent = "开始监控";
 
-          showNotification("监控已停止", "预约监控已停止");
+          showNotification(
+            "notifications.monitoring_stopped",
+            "notifications.monitoring_stopped"
+          );
         }
       } catch (msgError) {
         console.error("发送停止消息失败:", msgError);
@@ -403,7 +606,7 @@ async function saveConfig() {
       }
     }
 
-    showNotification("配置已保存", "正在自动引导到登录页面...");
+    showNotification("notifications.config_saved", "notifications.navigating");
     hideConfig();
 
     // 启动自动导航流程
@@ -460,7 +663,18 @@ async function autoSaveConfig() {
 }
 
 // 显示通知
-function showNotification(title, message) {
+function showNotification(titleKey, messageKey, params = {}) {
+  let title, message;
+
+  if (isI18nReady) {
+    title = i18n.t(titleKey, params);
+    message = i18n.t(messageKey, params);
+  } else {
+    // 降级处理：如果国际化未就绪，使用键名
+    title = titleKey;
+    message = messageKey;
+  }
+
   if (chrome.notifications) {
     chrome.notifications.create({
       type: "basic",
@@ -551,7 +765,10 @@ async function resetExtension() {
       document.getElementById("autoSubmitStatus").textContent = "关闭";
       document.getElementById("autoSubmitStatus").style.color = "#27ae60";
 
-      showNotification("扩展已重置", "所有数据已清除");
+      showNotification(
+        "notifications.extension_reset",
+        "notifications.all_data_cleared"
+      );
     } catch (error) {
       console.error("重置失败:", error);
       alert("重置失败: " + error.message);
@@ -639,18 +856,27 @@ async function refreshAppointmentCenters() {
         const storage = await chrome.storage.local.get(["__il"]);
         await loadAppointmentCenters(response.centers, storage.__il);
         showNotification(
-          "预约中心选项已更新",
-          `获取到 ${response.centers.length} 个预约中心`
+          "notifications.centers_updated",
+          "notifications.centers_updated"
         );
       } else {
-        showNotification("更新失败", "当前页面没有预约中心选项");
+        showNotification(
+          "notifications.update_failed",
+          "alerts.open_appointment_page"
+        );
       }
     } catch (error) {
       console.error("刷新预约中心选项失败:", error);
-      showNotification("更新失败", "无法连接到页面");
+      showNotification(
+        "notifications.update_failed",
+        "alerts.connection_failed"
+      );
     }
   } else {
-    showNotification("更新失败", "请先在美签预约页面上刷新");
+    showNotification(
+      "notifications.update_failed",
+      "alerts.open_appointment_page"
+    );
   }
 }
 
@@ -660,14 +886,14 @@ async function startAutoNavigationFlow(visaType) {
     const storage = await chrome.storage.local.get(["__un", "__pw"]);
 
     if (!storage.__un || !storage.__pw) {
-      showNotification("配置错误", "请先设置用户名和密码");
+      showNotification("alerts.fill_credentials", "alerts.fill_credentials");
       return;
     }
 
     // 根据签证类型构建登录URL
     const loginUrl = `https://ais.usvisa-info.com/en-ca/${visaType}/users/sign_in`;
 
-    showNotification("开始自动导航", "正在打开登录页面...");
+    showNotification("notifications.navigating", "notifications.navigating");
 
     // 打开登录页面
     chrome.tabs.create({ url: loginUrl }, (tab) => {
@@ -678,7 +904,7 @@ async function startAutoNavigationFlow(visaType) {
     });
   } catch (error) {
     console.error("自动导航失败:", error);
-    showNotification("导航失败", error.message);
+    showNotification("alerts.operation_failed", "alerts.operation_failed");
   }
 }
 
@@ -692,11 +918,11 @@ function trackNavigationProgress(tabId, visaType) {
 
       // 检查页面状态
       if (tab.url.includes("/users/sign_in")) {
-        showNotification("导航状态", "已到达登录页面，正在自动登录...");
+        showNotification("page_types.login", "page_types.login");
       } else if (tab.url.includes("/groups/")) {
-        showNotification("导航状态", "已登录，正在获取预约信息...");
+        showNotification("page_types.dashboard", "page_types.dashboard");
       } else if (tab.url.includes("/appointment")) {
-        showNotification("导航状态", "已到达预约页面，准备开始监控");
+        showNotification("page_types.appointment", "page_types.appointment");
         clearInterval(checkInterval);
       }
     } catch (error) {
