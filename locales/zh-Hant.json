@@ -26,7 +26,7 @@
         "username": "用戶名 (郵箱)",
         "password": "密碼",
         "please_select": "請選擇預約中心...",
-        "visit_page_first": "請先訪問預約頁面獲取中心選項"
+        "visit_appointment_page_first": "請先訪問預約頁面獲取中心選項"
     },
     "intervals": {
         "1_minute": "1 分鐘",

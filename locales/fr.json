@@ -26,7 +26,7 @@
         "username": "Nom d'utilisateur (Email)",
         "password": "Mot de passe",
         "please_select": "Veuillez sélectionner un centre de rendez-vous...",
-        "visit_page_first": "Veuillez d'abord visiter la page de rendez-vous pour obtenir les options de centre"
+        "visit_appointment_page_first": "Veuillez d'abord visiter la page de rendez-vous pour obtenir les options de centre"
     },
     "intervals": {
         "1_minute": "1 Minute",

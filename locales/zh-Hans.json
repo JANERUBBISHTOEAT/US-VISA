@@ -26,7 +26,8 @@
         "username": "用户名 (邮箱)",
         "password": "密码",
         "please_select": "请选择预约中心...",
-        "visit_page_first": "请先访问预约页面获取中心选项"
+        "visit_appointment_page_first": "请先访问预约页面获取中心选项",
+        "center": "中心"
     },
     "intervals": {
         "1_minute": "1 分钟",
@@ -44,7 +45,8 @@
         "waiting": "等待页面加载...",
         "not_connected": "未连接",
         "visit_website": "请先打开美签网站",
-        "pending": "待启动"
+        "pending": "待启动",
+        "waiting_to_start": "待启动"
     },
     "page_types": {
         "unknown": "未知页面",
@@ -99,7 +101,12 @@
         "open_appointment_page": "请先打开美签预约页面",
         "confirm_reset": "确定要重置扩展吗？这将清除所有保存的数据。",
         "connection_failed": "无法连接到页面，请刷新页面后重试",
-        "operation_failed": "操作失败"
+        "operation_failed": "操作失败",
+        "select_appointment_center": "请选择至少一个预约中心！",
+        "fill_username_password": "请填写用户名和密码",
+        "no_centers_selected": "启动监控失败，请确保在正确的页面",
+        "save_config_failed": "保存配置失败",
+        "reset_failed": "重置失败"
     },
     "toast_messages": {
         "checking_centers": "开始检查 {count} 个预约中心...",

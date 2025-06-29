@@ -10,8 +10,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadCurrentStatus();
   await loadDefaultSettings();
   setupEventListeners();
-
-  // 尝试加载预约中心选项
   await refreshAppointmentCenters();
 });
 
@@ -246,7 +244,11 @@ function setupEventListeners() {
         .filter((val) => val);
       const selectedTexts = selectedOptions
         .map((opt) => opt.text)
-        .filter((text) => text !== "请选择预约中心...");
+        .filter(
+          (text) =>
+            text !==
+            (isI18nReady ? i18n.t("form.please_select") : "请选择预约中心...")
+        );
 
       if (selectedValues.length > 0) {
         // 自动保存选择（多个值用逗号分隔）
@@ -449,7 +451,11 @@ async function startMonitoringFlow() {
 
     if (!storage.__un || !storage.__pw) {
       console.log("配置不完整，显示配置面板");
-      alert("请先在设置中配置账号信息");
+      alert(
+        isI18nReady
+          ? i18n.t("alerts.fill_credentials")
+          : "请先在设置中配置账号信息"
+      );
       showConfig(); // 显示配置面板
       return;
     }
@@ -515,7 +521,11 @@ async function startMonitoringFlow() {
             "__targetIsMonitoring",
             "__selectedCentersForTarget",
           ]);
-          alert("请选择至少一个预约中心！");
+          alert(
+            isI18nReady
+              ? i18n.t("alerts.select_appointment_center")
+              : "请选择至少一个预约中心！"
+          );
           return;
         }
       } else {
@@ -586,11 +596,19 @@ async function startRealMonitoring(selectedValues) {
 
       console.log("监控已启动，选择的中心:", selectedValues);
     } else {
-      alert("启动监控失败，请确保在正确的页面");
+      alert(
+        isI18nReady
+          ? i18n.t("alerts.no_centers_selected")
+          : "启动监控失败，请确保在正确的页面"
+      );
     }
   } catch (msgError) {
     console.error("发送监控消息失败:", msgError);
-    alert("无法连接到页面，请刷新页面后重试");
+    alert(
+      isI18nReady
+        ? i18n.t("alerts.connection_failed")
+        : "无法连接到页面，请刷新页面后重试"
+    );
   }
 }
 
@@ -678,7 +696,11 @@ async function saveConfig() {
   const visaType = document.getElementById("visaTypeSelect").value;
 
   if (!username || !password) {
-    alert("请填写用户名和密码");
+    alert(
+      isI18nReady
+        ? i18n.t("alerts.fill_username_password")
+        : "请填写用户名和密码"
+    );
     return;
   }
 
@@ -714,7 +736,11 @@ async function saveConfig() {
     console.log("配置已保存，点击'开始监控'将自动跳转到相应页面");
   } catch (error) {
     console.error("保存配置失败:", error);
-    alert("保存配置失败: " + error.message);
+    alert(
+      isI18nReady
+        ? i18n.t("alerts.save_config_failed")
+        : "保存配置失败: " + error.message
+    );
   }
 }
 
@@ -827,7 +853,11 @@ async function goToSchedule() {
 
 // 重置扩展
 async function resetExtension() {
-  if (confirm("确定要重置扩展吗？这将清除所有保存的数据。")) {
+  const confirmMessage = isI18nReady
+    ? i18n.t("alerts.confirm_reset")
+    : "确定要重置扩展吗？这将清除所有保存的数据。";
+
+  if (confirm(confirmMessage)) {
     try {
       await chrome.storage.local.clear();
 
@@ -843,8 +873,12 @@ async function resetExtension() {
 
       // 重新加载状态
       isRunning = false;
-      document.getElementById("status").textContent = "状态：未启动";
-      document.getElementById("toggleBtn").textContent = "开始监控";
+      document.getElementById("status").textContent = isI18nReady
+        ? i18n.t("status_messages.not_started")
+        : "状态：未启动";
+      document.getElementById("toggleBtn").textContent = isI18nReady
+        ? i18n.t("ui.start_monitoring")
+        : "开始监控";
 
       // 清除表单
       document.getElementById("locationSelect").innerHTML =
@@ -858,8 +892,12 @@ async function resetExtension() {
       document.getElementById("scheduleDisplay").textContent = "-";
       document.getElementById("locationDisplay").textContent = "-";
       document.getElementById("currentDateDisplay").textContent = "-";
-      document.getElementById("monitorStatus").textContent = "待启动";
-      document.getElementById("autoSubmitStatus").textContent = "关闭";
+      document.getElementById("monitorStatus").textContent = isI18nReady
+        ? i18n.t("status_messages.waiting_to_start")
+        : "待启动";
+      document.getElementById("autoSubmitStatus").textContent = isI18nReady
+        ? i18n.t("info_values.disabled")
+        : "关闭";
       document.getElementById("autoSubmitStatus").style.color = "#27ae60";
 
       showNotification(
@@ -868,22 +906,38 @@ async function resetExtension() {
       );
     } catch (error) {
       console.error("重置失败:", error);
-      alert("重置失败: " + error.message);
+      alert(
+        isI18nReady
+          ? i18n.t("alerts.reset_failed")
+          : "重置失败: " + error.message
+      );
     }
   }
 }
 
 // 加载预约中心选项
 async function loadAppointmentCenters(savedCenters, selectedValue) {
+  console.log("loadAppointmentCenters 调用，参数:", {
+    savedCenters: savedCenters ? `${savedCenters.length} 个中心` : "无数据",
+    selectedValue,
+    currentTab: currentTab?.url,
+  });
+
   const locationSelect = document.getElementById("locationSelect");
 
   // 清空现有选项（除了默认选项）
-  locationSelect.innerHTML = '<option value="">请选择预约中心...</option>';
+  locationSelect.innerHTML = isI18nReady
+    ? `<option value="">${i18n.t("form.please_select")}</option>`
+    : '<option value="">请选择预约中心...</option>';
 
   let centers = savedCenters;
 
   // 尝试从当前标签页获取
-  if (currentTab?.url?.includes("ais.usvisa-info.com")) {
+  if (
+    currentTab &&
+    currentTab.url &&
+    currentTab.url.includes("ais.usvisa-info.com")
+  ) {
     try {
       const response = await chrome.tabs.sendMessage(currentTab.id, {
         action: "get_centers",
@@ -891,9 +945,11 @@ async function loadAppointmentCenters(savedCenters, selectedValue) {
 
       if (response?.centers) {
         centers = response.centers;
-        // 保存到storage
-        await chrome.storage.local.set({ __centers: centers });
-        console.log("从页面获取并保存预约中心选项:", centers.length);
+        if (Array.isArray(centers) && centers.length > 0) {
+          // 如果获取到中心数据，保存到local storage
+          await chrome.storage.local.set({ __centers: centers });
+          console.log("从页面获取并保存预约中心选项:", centers.length);
+        }
       }
     } catch (error) {
       console.log("无法从页面获取预约中心选项:", error);
@@ -901,9 +957,11 @@ async function loadAppointmentCenters(savedCenters, selectedValue) {
   }
 
   // 如果仍然没有中心数据，尝试从local storage加载
-  if (!centers) {
+  if (!centers || !Array.isArray(centers) || centers.length === 0) {
+    console.log("没有传入的centers数据，尝试从localStorage加载");
     try {
       const storage = await chrome.storage.local.get(["__centers"]);
+      console.log("localStorage查询结果:", storage);
       if (
         storage.__centers &&
         Array.isArray(storage.__centers) &&
@@ -911,12 +969,14 @@ async function loadAppointmentCenters(savedCenters, selectedValue) {
       ) {
         centers = storage.__centers;
         console.log("从local storage加载预约中心选项:", centers.length);
-      } else if (!centers) {
+      } else {
         console.log("local storage中无预约中心数据，尝试其他方式获取");
       }
     } catch (error) {
       console.log("从local storage获取预约中心选项失败:", error);
     }
+  } else {
+    console.log("使用传入的centers数据:", centers.length);
   }
 
   // 填充选项
@@ -946,7 +1006,9 @@ async function loadAppointmentCenters(savedCenters, selectedValue) {
     // 如果没有数据，添加提示选项
     const option = document.createElement("option");
     option.value = "";
-    option.textContent = "请先访问预约页面获取中心选项";
+    option.textContent = isI18nReady
+      ? i18n.t("form.visit_appointment_page_first")
+      : "请先访问预约页面获取中心选项";
     option.disabled = true;
     locationSelect.appendChild(option);
     console.log("无预约中心数据，显示提示信息");
@@ -955,37 +1017,44 @@ async function loadAppointmentCenters(savedCenters, selectedValue) {
 
 // 刷新预约中心选项
 async function refreshAppointmentCenters() {
-  if (currentTab?.url?.includes("ais.usvisa-info.com")) {
-    try {
-      const response = await chrome.tabs.sendMessage(currentTab.id, {
-        action: "get_centers",
-      });
+  try {
+    const response = await chrome.tabs.sendMessage(currentTab.id, {
+      action: "get_centers",
+    });
 
-      if (response?.centers) {
-        const storage = await chrome.storage.local.get(["__il"]);
-        await loadAppointmentCenters(response.centers, storage.__il);
-        showNotification(
-          "notifications.centers_updated",
-          "notifications.centers_updated"
-        );
-      } else {
-        showNotification(
-          "notifications.update_failed",
-          "alerts.open_appointment_page"
-        );
-      }
-    } catch (error) {
-      console.error("刷新预约中心选项失败:", error);
+    if (response?.centers) {
+      const storage = await chrome.storage.local.get(["__il"]);
+      await loadAppointmentCenters(response.centers, storage.__il);
+      showNotification(
+        "notifications.centers_updated",
+        "notifications.centers_updated"
+      );
+    } else {
       showNotification(
         "notifications.update_failed",
-        "alerts.connection_failed"
+        "alerts.open_appointment_page"
       );
     }
-  } else {
-    showNotification(
-      "notifications.update_failed",
-      "alerts.open_appointment_page"
-    );
+  } catch (error) {
+    console.error("刷新预约中心选项失败:", error);
+    showNotification("notifications.update_failed", "alerts.connection_failed");
+  }
+
+  // Fallback到从localStorage加载
+  try {
+    const storage = await chrome.storage.local.get(["__centers", "__il"]);
+    if (
+      storage.__centers &&
+      Array.isArray(storage.__centers) &&
+      storage.__centers.length > 0
+    ) {
+      await loadAppointmentCenters(storage.__centers, storage.__il);
+      console.log("从localStorage成功加载centers:", storage.__centers.length);
+    } else {
+      console.log("localStorage中没有可用的centers数据");
+    }
+  } catch (error) {
+    console.error("从localStorage加载centers失败:", error);
   }
 }
 
@@ -1166,7 +1235,8 @@ function getCenterDisplayName(centerValue, locationSelect) {
 
     // 如果只是数字，尝试找到更友好的名称
     if (/^\d+$/.test(displayText)) {
-      displayText = `中心(${displayText})`;
+      const centerLabel = isI18nReady ? i18n.t("form.center") : "中心";
+      displayText = `${centerLabel}(${displayText})`;
     }
 
     // 如果文本太长，适当缩短但保留关键信息

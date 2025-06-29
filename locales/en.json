@@ -26,7 +26,8 @@
         "username": "Username (Email)",
         "password": "Password",
         "please_select": "Please select appointment center...",
-        "visit_page_first": "Please visit appointment page first to get center options"
+        "visit_appointment_page_first": "Please visit appointment page first to get center options",
+        "center": "Center"
     },
     "intervals": {
         "1_minute": "1 Minute",
@@ -44,7 +45,8 @@
         "waiting": "Waiting for page to load...",
         "not_connected": "Not Connected",
         "visit_website": "Please open US Visa website first",
-        "pending": "Pending"
+        "pending": "Pending",
+        "waiting_to_start": "Waiting to Start"
     },
     "page_types": {
         "unknown": "Unknown Page",
@@ -55,16 +57,16 @@
         "address": "Address Page",
         "homepage": "Homepage"
     },
+    "info_values": {
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+    },
     "info_labels": {
         "appointment_id": "Appointment ID",
         "location": "Location",
         "current_appointment": "Current Appointment",
         "monitor_status": "Monitor Status",
         "auto_submit_status": "Auto Submit"
-    },
-    "info_values": {
-        "enabled": "Enabled",
-        "disabled": "Disabled"
     },
     "tips": {
         "title": "💡 Usage Tips:",
@@ -99,7 +101,12 @@
         "open_appointment_page": "Please open US Visa appointment page first",
         "confirm_reset": "Are you sure you want to reset the extension? This will clear all saved data.",
         "connection_failed": "Cannot connect to page, please refresh and try again",
-        "operation_failed": "Operation failed"
+        "operation_failed": "Operation failed",
+        "select_appointment_center": "Please select at least one appointment center!",
+        "fill_username_password": "Please fill in username and password",
+        "no_centers_selected": "Failed to start monitoring, please ensure you're on the correct page",
+        "save_config_failed": "Failed to save configuration",
+        "reset_failed": "Reset failed"
     },
     "toast_messages": {
         "checking_centers": "Starting to check {count} appointment centers...",

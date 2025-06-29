@@ -1504,7 +1504,7 @@
       );
 
       if (!centerSelect) {
-        console.log("未找到预约中心选择器");
+        // console.log("未找到预约中心选择器");
         return [];
       }
 
@@ -1522,7 +1522,7 @@
         }
       });
 
-      console.log(`获取到 ${centers.length} 个预约中心选项:`, centers);
+      // console.log(`获取到 ${centers.length} 个预约中心选项:`, centers);
       return centers;
     } catch (error) {
       console.error("获取预约中心选项失败:", error);
