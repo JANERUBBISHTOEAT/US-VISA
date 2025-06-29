@@ -16,7 +16,8 @@
     $timer = 60000, // 默认1分钟检查间隔
     $version = "2.0.0",
     $checkInterval = null,
-    $visaType = "niv"; // 默认非移民签证
+    $visaType = "niv", // 默认非移民签证
+    $autoSubmit = false; // 自动提交开关
 
   // 工具函数
   const delay = async ($delay = 2000) =>
@@ -259,11 +260,96 @@
       const submitBtn = document.getElementById("appointments_submit");
       if (submitBtn) {
         submitBtn.removeAttribute("disabled");
-        toast("表单已自动填写，请检查并提交", "success");
+
+        if ($autoSubmit) {
+          // 自动提交模式
+          toast("表单已自动填写，准备自动提交...", "success");
+
+          // 等待随机延迟后自动提交
+          await randomDelay(3000, 2000); // 3-5秒随机延迟
+
+          // 最后一次验证表单
+          if (validateForm()) {
+            toast("正在自动提交预约...", "info");
+            submitBtn.click();
+
+            // 停止监控，避免重复提交
+            stopMonitoring();
+
+            await throwNotification(
+              "预约已自动提交!",
+              `${date} ${time} 的预约已成功提交，请检查确认页面`
+            );
+          } else {
+            toast("表单验证失败，请手动检查并提交", "warning");
+          }
+        } else {
+          // 手动提交模式
+          toast("表单已自动填写，请检查并提交", "success");
+        }
       }
     } catch (error) {
       console.error("填写表单时出错:", error);
       toast(`填写表单失败: ${error.message}`, "error");
+    }
+  }
+
+  // 验证表单是否填写完整
+  function validateForm() {
+    try {
+      const dateField = document.getElementById(
+        "appointments_consulate_appointment_date"
+      );
+      const timeField = document.getElementById(
+        "appointments_consulate_appointment_time"
+      );
+      const centerField = document.getElementById(
+        "appointments_consulate_appointment_facility_id"
+      );
+
+      // 检查必填字段
+      if (!dateField || !dateField.value) {
+        console.log("日期字段未填写");
+        return false;
+      }
+
+      if (!timeField || !timeField.value) {
+        console.log("时间字段未填写");
+        return false;
+      }
+
+      if (!centerField || !centerField.value) {
+        console.log("预约中心字段未填写");
+        return false;
+      }
+
+      // 如果有ASC字段，也需要验证
+      const ascDateField = document.getElementById(
+        "appointments_asc_appointment_date"
+      );
+      if (ascDateField) {
+        const ascTimeField = document.getElementById(
+          "appointments_asc_appointment_time"
+        );
+        const ascCenterField = document.getElementById(
+          "appointments_asc_appointment_facility_id"
+        );
+
+        if (
+          !ascDateField.value ||
+          !ascTimeField?.value ||
+          !ascCenterField?.value
+        ) {
+          console.log("ASC预约字段未完整填写");
+          return false;
+        }
+      }
+
+      console.log("表单验证通过");
+      return true;
+    } catch (error) {
+      console.error("表单验证失败:", error);
+      return false;
     }
   }
 
@@ -546,6 +632,7 @@
         "__timer",
         "__it",
         "__vt",
+        "__as", // 自动提交配置
       ]);
 
       $username = storage.__un;
@@ -560,6 +647,7 @@
       $active = storage.__active || false;
       $timer = storage.__timer || 60000;
       $visaType = storage.__vt || currentVisaType || "niv";
+      $autoSubmit = storage.__as || false;
 
       console.log("配置已加载:", {
         username: $username ? "已设置" : "未设置",
@@ -567,6 +655,7 @@
         apptDate: $apptDate,
         visaType: $visaType,
         active: $active,
+        autoSubmit: $autoSubmit,
       });
 
       // 同步签证类型到存储
@@ -909,6 +998,7 @@
         apptDate: $apptDate,
         scheduleId: scheduleId,
         visaType: $visaType,
+        autoSubmit: $autoSubmit,
         currentPage: {
           isSignIn,
           isDashboard,
@@ -941,6 +1031,10 @@
       if (request.visaType) {
         $visaType = request.visaType;
         chrome.storage.local.set({ __vt: $visaType });
+      }
+      if (request.autoSubmit !== undefined) {
+        $autoSubmit = request.autoSubmit;
+        chrome.storage.local.set({ __as: $autoSubmit });
       }
       return sendResponse({ success: true });
     }

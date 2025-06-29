@@ -177,10 +177,31 @@
       }
 
       .help-text {
-        color: #666;
         font-size: 11px;
+        color: #7f8c8d;
         margin-top: 3px;
         display: block;
+      }
+
+      /* 复选框样式 */
+      label[for="autoSubmitToggle"] {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        font-weight: 500;
+        color: #e74c3c;
+      }
+
+      #autoSubmitToggle {
+        margin-right: 8px;
+        margin-bottom: 0;
+        transform: scale(1.2);
+      }
+
+      label[for="autoSubmitToggle"] .help-text {
+        color: #e67e22;
+        font-size: 10px;
+        margin-top: 2px;
       }
 
       select[multiple] {
@@ -245,6 +266,16 @@
         </select>
       </div>
 
+      <div class="form-group">
+        <label for="autoSubmitToggle">
+          <input type="checkbox" id="autoSubmitToggle" />
+          自动提交预约 (高级功能)
+        </label>
+        <small class="help-text"
+          >⚠️ 开启后发现更早预约时将自动提交表单，请谨慎使用</small
+        >
+      </div>
+
       <div id="status" class="status inactive">状态：未启动</div>
 
       <button id="toggleBtn" class="btn-primary">开始监控</button>
@@ -267,15 +298,21 @@
           <span class="info-label">监控状态</span>
           <span id="monitorStatus" class="info-value">待启动</span>
         </div>
+        <div class="info-item">
+          <span class="info-label">自动提交</span>
+          <span id="autoSubmitStatus" class="info-value">关闭</span>
+        </div>
       </div>
 
       <div class="tips">
         💡 <strong>使用提示:</strong><br />
         1. 首先在设置中配置账号信息<br />
         2. 选择一个或多个预约中心后启动监控<br />
-        3. 发现更早预约时会自动通知<br />
+        3. 发现更早预约时会自动填写表单并通知<br />
+        4. 开启"自动提交"后会自动完成预约提交<br />
         💡 如未看到预约中心选项，请点击"刷新"按钮<br />
-        🚀 多中心监控会随机间隔检查，模拟真人操作
+        🚀 多中心监控会随机间隔检查，模拟真人操作<br />
+        ⚠️ 自动提交功能请谨慎使用，建议先手动测试
       </div>
     </div>
 

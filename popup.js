@@ -18,10 +18,16 @@ async function loadDefaultSettings() {
       "__il",
       "__vt",
       "__centers",
+      "__as", // 自动提交设置
     ]);
 
     if (storage.__vt) {
       document.getElementById("visaTypeSelect").value = storage.__vt;
+    }
+
+    // 加载自动提交设置
+    if (storage.__as !== undefined) {
+      document.getElementById("autoSubmitToggle").checked = storage.__as;
     }
 
     // 加载预约中心选项
@@ -49,6 +55,22 @@ function setupEventListeners() {
   document
     .getElementById("refreshCentersBtn")
     .addEventListener("click", refreshAppointmentCenters);
+
+  // 自动提交开关
+  document
+    .getElementById("autoSubmitToggle")
+    .addEventListener("change", function (e) {
+      const autoSubmit = e.target.checked;
+      chrome.storage.local.set({ __as: autoSubmit });
+
+      // 同时通知content script
+      sendMessageToCurrentTab({
+        action: "set_config",
+        autoSubmit: autoSubmit,
+      });
+
+      console.log("自动提交设置:", autoSubmit ? "已开启" : "已关闭");
+    });
 
   // 预约中心选择变化事件
   document
@@ -182,6 +204,13 @@ function updateUI(status) {
   }
 
   document.getElementById("monitorStatus").textContent = pageStatus;
+
+  // 更新自动提交状态显示
+  const autoSubmitStatus = status.autoSubmit ? "开启" : "关闭";
+  document.getElementById("autoSubmitStatus").textContent = autoSubmitStatus;
+  document.getElementById("autoSubmitStatus").style.color = status.autoSubmit
+    ? "#e74c3c"
+    : "#27ae60";
 
   // 更新签证类型显示
   if (status.visaType) {
@@ -489,12 +518,15 @@ async function resetExtension() {
       document.getElementById("usernameInput").value = "";
       document.getElementById("passwordInput").value = "";
       document.getElementById("visaTypeSelect").value = "niv";
+      document.getElementById("autoSubmitToggle").checked = false;
 
       // 清除显示信息
       document.getElementById("scheduleDisplay").textContent = "-";
       document.getElementById("locationDisplay").textContent = "-";
       document.getElementById("currentDateDisplay").textContent = "-";
       document.getElementById("monitorStatus").textContent = "待启动";
+      document.getElementById("autoSubmitStatus").textContent = "关闭";
+      document.getElementById("autoSubmitStatus").style.color = "#27ae60";
 
       showNotification("扩展已重置", "所有数据已清除");
     } catch (error) {
