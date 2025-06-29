@@ -125,7 +125,10 @@
         "center_not_set": "預約中心未設置",
         "server_error": "服務器錯誤 ({status})，將重試...",
         "auth_failed": "認證失敗，請重新登錄",
-        "current_appointment_info": "當前預約: {appointment}"
+        "current_appointment_info": "當前預約: {appointment}",
+        "soft_ban_detected": "⚠️ 檢測到頻率限制（第#{banCount}次），切換到小時級檢查模式",
+        "soft_ban_recovered": "✅ 頻率限制已解除，恢復正常檢查頻率",
+        "soft_ban_no_times": "日期 {date} 在中心 {center} 沒有可用時間（可能的頻率限制）"
     },
     "log_messages": {
         "i18n_init_complete": "內容腳本國際化初始化完成",
@@ -205,7 +208,17 @@
         "monitoring_can_only_start_on_reschedule": "監控只能在重新預約頁面啟動",
         "must_select_center_to_start": "必須選擇預約中心才能啟動監控",
         "set_center_failed": "設置預約中心失敗: {error}",
-        "unrecognized_page_generic_navigation": "無法識別的頁面類型，嘗試通用導航"
+        "unrecognized_page_generic_navigation": "無法識別的頁面類型，嘗試通用導航",
+        "soft_ban_detected": "檢測到軟封禁（第#{banCount}次），切換到延長間隔模式",
+        "soft_ban_recovered": "軟封禁已恢復，返回正常檢查間隔",
+        "soft_ban_interval_applied": "應用軟封禁間隔: {baseInterval}秒 → {softBanInterval}秒 (第#{banCount}次, x{multiplier})",
+        "soft_ban_count_reset": "軟封禁計數已減少: {newBanCount} (x{newMultiplier})",
+        "next_check_soft_ban": "下次檢查將在 {intervalMinutes} 分鐘後進行（軟封禁模式第#{banCount}次）",
+        "business_hours_rate_limit": "檢測到工作時間 (美東時間 {etHour}:00)，應用保守的頻率限制 (倍數: {multiplier})",
+        "after_hours_rate_limit": "檢測到非工作時間 (美東時間 {etHour}:00)，應用適中的頻率限制 (倍數: {multiplier})",
+        "weekend_rate_limit": "檢測到週末 (美東時間 {etHour}:00)，應用寬鬆的頻率限制 (倍數: {multiplier})",
+        "timezone_adjusted_interval": "時區調整間隔: {baseInterval}秒 → {adjustedInterval}秒 (美東時間: {easternTime}, 小時: {etHour}, 工作時間: {isBusinessHours}, 工作日: {isWeekday})",
+        "timezone_calculation_failed": "時區計算失敗: {error}，使用默認間隔"
     },
     "field_names": {
         "date": "日期",

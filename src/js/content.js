@@ -100,7 +100,11 @@
     $version = "2.0.0",
     $checkInterval = null,
     $visaType = "niv", // 默认非移民签证
-    $autoSubmit = false; // 自动提交开关
+    $autoSubmit = false, // 自动提交开关
+    $isSoftBanned = false, // 软封禁状态
+    $softBanCount = 0, // 连续软封禁计数
+    $originalTimer = 60000, // 原始检查间隔（用于恢复）
+    $softBanMultiplier = 1; // 软封禁间隔倍数
 
   // 工具函数
   const delay = async ($delay = 2000) =>
@@ -180,15 +184,176 @@
     await new Promise((r) => setTimeout(r, totalDelay));
   };
 
-  // 生成随机检查间隔
+  // 生成随机检查间隔 - 支持时区感知的频率控制和软封禁处理
   const getRandomInterval = (baseInterval) => {
+    // 如果处于软封禁状态，使用延长的间隔
+    if ($isSoftBanned) {
+      const softBanInterval = getSoftBanInterval(baseInterval);
+      logI18n("log_messages.soft_ban_interval_applied", "warning", {
+        baseInterval: Math.round(baseInterval / 1000),
+        softBanInterval: Math.round(softBanInterval / 1000),
+        banCount: $softBanCount,
+        multiplier: $softBanMultiplier,
+      });
+      return softBanInterval;
+    }
+
     // 基础间隔 + 随机波动 (±20%)
     const variance = baseInterval * 0.2;
     const randomVariance = (Math.random() - 0.5) * 2 * variance;
-    const finalInterval = baseInterval + randomVariance;
+    let finalInterval = baseInterval + randomVariance;
+
+    // 应用时区感知的频率控制
+    finalInterval = applyTimezoneBasedRateLimit(finalInterval);
 
     // 确保最小间隔不少于30秒
     return Math.max(finalInterval, 30000);
+  };
+
+  // 软封禁间隔计算
+  const getSoftBanInterval = (baseInterval) => {
+    // 软封禁时的间隔策略：
+    // 第1次软封禁：30分钟
+    // 第2次软封禁：1小时
+    // 第3次及以上：2小时 + 每次额外增加30分钟
+    let hourlyMultiplier;
+
+    if ($softBanCount === 1) {
+      hourlyMultiplier = 0.5; // 30分钟
+    } else if ($softBanCount === 2) {
+      hourlyMultiplier = 1; // 1小时
+    } else {
+      hourlyMultiplier = 2 + ($softBanCount - 2) * 0.5; // 2小时 + 额外时间
+    }
+
+    const softBanInterval = 60 * 60 * 1000 * hourlyMultiplier; // 转换为毫秒
+
+    // 添加 ±10% 的随机变化
+    const variance = softBanInterval * 0.1;
+    const randomVariance = (Math.random() - 0.5) * 2 * variance;
+
+    return Math.max(softBanInterval + randomVariance, 31 * 60 * 1000); // 最少30分钟
+  };
+
+  // 检测软封禁状态
+  const detectSoftBan = (availableTimes) => {
+    const wasPreviouslySoftBanned = $isSoftBanned;
+
+    // 如果时间数组为空或null，认为是软封禁
+    if (!availableTimes || availableTimes.length === 0) {
+      if (!$isSoftBanned) {
+        // 首次检测到软封禁
+        $isSoftBanned = true;
+        $softBanCount++;
+        $softBanMultiplier = Math.pow(2, $softBanCount - 1); // 指数增长
+
+        logI18n("log_messages.soft_ban_detected", "warning", {
+          banCount: $softBanCount,
+          multiplier: $softBanMultiplier,
+        });
+
+        toast("toast_messages.soft_ban_detected", "warning", {
+          banCount: $softBanCount,
+        });
+      }
+      return true;
+    } else {
+      // 有可用时间，检查是否从软封禁状态恢复
+      if ($isSoftBanned) {
+        $isSoftBanned = false;
+
+        logI18n("log_messages.soft_ban_recovered", "success", {
+          previousBanCount: $softBanCount,
+        });
+
+        toast("toast_messages.soft_ban_recovered", "success");
+
+        // 重置软封禁计数（可选：也可以保持计数以防短期内再次封禁）
+        // $softBanCount = 0;
+      }
+      return false;
+    }
+  };
+
+  // 重置软封禁状态（当长时间正常运行时调用）
+  const resetSoftBanStatus = () => {
+    if ($softBanCount > 0) {
+      const resetHours = 12; // 12小时后重置软封禁计数
+      setTimeout(() => {
+        if (!$isSoftBanned) {
+          // 只有在当前不是软封禁状态时才重置
+          $softBanCount = Math.max(0, $softBanCount - 1);
+          $softBanMultiplier = Math.max(1, $softBanMultiplier / 2);
+
+          logI18n("log_messages.soft_ban_count_reset", "info", {
+            newBanCount: $softBanCount,
+            newMultiplier: $softBanMultiplier,
+          });
+        }
+      }, resetHours * 60 * 60 * 1000);
+    }
+  };
+
+  // 时区感知的频率限制 - 美签网站在美国东部时间工作时间内限制更严格
+  const applyTimezoneBasedRateLimit = (baseInterval) => {
+    try {
+      // 获取美国东部时间（ET - Eastern Time）
+      // 美国东部时间会根据夏令时自动调整（EST/EDT）
+      const easternTime = new Date().toLocaleString("en-US", {
+        timeZone: "America/New_York",
+      });
+      const etDate = new Date(easternTime);
+      const etHour = etDate.getHours();
+
+      // 美签网站的业务时间通常是美东时间 9:00 AM - 5:00 PM (工作日)
+      // 在业务时间内使用更保守的频率
+      const isBusinessHours = etHour >= 9 && etHour < 17;
+      const isWeekday = etDate.getDay() >= 1 && etDate.getDay() <= 5; // 周一到周五
+
+      let multiplier = 1.0;
+
+      if (isWeekday && isBusinessHours) {
+        // 工作日的业务时间：增加 50-100% 的延迟
+        multiplier = 1.5 + Math.random() * 0.5; // 1.5x - 2.0x
+        logI18n("log_messages.business_hours_rate_limit", "info", {
+          etHour: etHour,
+          multiplier: multiplier.toFixed(2),
+        });
+      } else if (isWeekday) {
+        // 工作日的非业务时间：增加 20-50% 的延迟
+        multiplier = 1.2 + Math.random() * 0.3; // 1.2x - 1.5x
+        logI18n("log_messages.after_hours_rate_limit", "info", {
+          etHour: etHour,
+          multiplier: multiplier.toFixed(2),
+        });
+      } else {
+        // 周末：使用基本间隔或稍微减少
+        multiplier = 0.8 + Math.random() * 0.4; // 0.8x - 1.2x
+        logI18n("log_messages.weekend_rate_limit", "info", {
+          etHour: etHour,
+          multiplier: multiplier.toFixed(2),
+        });
+      }
+
+      const adjustedInterval = baseInterval * multiplier;
+
+      logI18n("log_messages.timezone_adjusted_interval", "info", {
+        baseInterval: Math.round(baseInterval / 1000),
+        adjustedInterval: Math.round(adjustedInterval / 1000),
+        easternTime: easternTime,
+        etHour: etHour,
+        isBusinessHours: isBusinessHours,
+        isWeekday: isWeekday,
+      });
+
+      return adjustedInterval;
+    } catch (error) {
+      logI18n("log_messages.timezone_calculation_failed", "warning", {
+        error: error.message,
+      });
+      // 如果时区计算失败，返回原始间隔
+      return baseInterval;
+    }
   };
 
   // 核心预约检查函数 - 支持多中心
@@ -294,11 +459,29 @@
 
       const $times = await timesResponse.json();
 
+      // 检测软封禁状态
+      const isSoftBanned = detectSoftBan($times.available_times);
+
+      if (isSoftBanned) {
+        // 如果检测到软封禁，记录但不停止监控，只是延长间隔
+        toast("toast_messages.soft_ban_no_times", "warning", {
+          date: latestDate,
+          center: $center,
+        });
+        return;
+      }
+
       if (!$times.available_times || $times.available_times.length === 0) {
         toast("toast_messages.no_available_times", "warning", {
           date: latestDate,
         });
         return;
+      }
+
+      // 如果有可用时间且之前处于软封禁状态，触发恢复逻辑
+      if ($times.available_times.length > 0) {
+        detectSoftBan($times.available_times); // 这会处理恢复逻辑
+        resetSoftBanStatus(); // 开始重置计时器
       }
 
       let selectedTime = $times.available_times[0];
@@ -708,6 +891,7 @@
     }
 
     $active = true;
+    $originalTimer = $timer; // 保存原始间隔
     toast("notifications.monitoring_started", "success");
 
     // 创建监控上下文，用于页面导航后的状态恢复
@@ -718,6 +902,12 @@
       visaType: $visaType,
       timestamp: Date.now(),
       startedFromReschedule: true,
+      originalTimer: $originalTimer,
+      softBanState: {
+        isSoftBanned: $isSoftBanned,
+        softBanCount: $softBanCount,
+        softBanMultiplier: $softBanMultiplier,
+      },
     };
 
     logI18n("log_messages.creating_monitoring_context", "info", {
@@ -747,11 +937,20 @@
           return;
         }
 
-        // 生成随机间隔
+        // 生成随机间隔（现在会考虑软封禁状态）
         const randomInterval = getRandomInterval($timer);
-        logI18n("log_messages.next_check_in", "info", {
-          interval: Math.round(randomInterval / 1000),
-        });
+
+        // 记录下次检查时间，区分正常和软封禁状态
+        if ($isSoftBanned) {
+          logI18n("log_messages.next_check_soft_ban", "warning", {
+            intervalMinutes: Math.round(randomInterval / 60000),
+            banCount: $softBanCount,
+          });
+        } else {
+          logI18n("log_messages.next_check_in", "info", {
+            interval: Math.round(randomInterval / 1000),
+          });
+        }
 
         setTimeout(() => {
           if ($active && isAppointment) {
@@ -771,6 +970,12 @@
       __active: true,
       __timer: $timer,
       __monitoringContext: monitoringContext, // 持久化监控上下文
+      __softBanState: {
+        isSoftBanned: $isSoftBanned,
+        softBanCount: $softBanCount,
+        softBanMultiplier: $softBanMultiplier,
+        originalTimer: $originalTimer,
+      },
     });
 
     logI18n("log_messages.monitoring_started", "info");
@@ -884,7 +1089,13 @@
       "__targetIsMonitoring",
       "__selectedCentersForTarget",
       "__maintainMonitoring",
+      "__softBanState",
     ]);
+
+    // 重置软封禁状态（可选：也可以保持状态以便下次启动时继续使用）
+    // $isSoftBanned = false;
+    // $softBanCount = 0;
+    // $softBanMultiplier = 1;
 
     logI18n("log_messages.monitoring_completely_stopped", "info");
   }
@@ -924,6 +1135,14 @@
       $timer = storage.__timer || 60000;
       $visaType = storage.__vt || currentVisaType || "niv";
       $autoSubmit = storage.__as || false;
+
+      // 恢复软封禁状态
+      if (storage.__softBanState) {
+        $isSoftBanned = storage.__softBanState.isSoftBanned || false;
+        $softBanCount = storage.__softBanState.softBanCount || 0;
+        $softBanMultiplier = storage.__softBanState.softBanMultiplier || 1;
+        $originalTimer = storage.__softBanState.originalTimer || $timer;
+      }
 
       // 如果存储的是逗号分隔的字符串，转换为数组
       if (

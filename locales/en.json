@@ -125,7 +125,10 @@
         "center_not_set": "Appointment center not set",
         "server_error": "Server error ({status}), will retry...",
         "auth_failed": "Authentication failed, please login again",
-        "current_appointment_info": "Current appointment: {appointment}"
+        "current_appointment_info": "Current appointment: {appointment}",
+        "soft_ban_detected": "⚠️ Rate limit detected (#{banCount}), switching to hourly check mode",
+        "soft_ban_recovered": "✅ Rate limit lifted, returning to normal frequency",
+        "soft_ban_no_times": "No available times for {date} at center {center} (possible rate limit)"
     },
     "log_messages": {
         "i18n_init_complete": "Content script internationalization initialized",
@@ -205,7 +208,17 @@
         "monitoring_can_only_start_on_reschedule": "Monitoring can only be started on reschedule page",
         "must_select_center_to_start": "Must select appointment center to start monitoring",
         "set_center_failed": "Failed to set appointment center: {error}",
-        "unrecognized_page_generic_navigation": "Unrecognized page type, attempting generic navigation"
+        "unrecognized_page_generic_navigation": "Unrecognized page type, attempting generic navigation",
+        "soft_ban_detected": "Soft ban detected (attempt #{banCount}), switching to extended interval mode",
+        "soft_ban_recovered": "Soft ban recovered, returning to normal checking interval",
+        "soft_ban_interval_applied": "Soft ban interval applied: {baseInterval}s → {softBanInterval}s (#{banCount}, x{multiplier})",
+        "soft_ban_count_reset": "Soft ban count reduced: {newBanCount} (x{newMultiplier})",
+        "next_check_soft_ban": "Next check in {intervalMinutes} minutes (soft ban mode #{banCount})",
+        "business_hours_rate_limit": "Business hours detected (ET {etHour}:00), applying conservative rate limiting (multiplier: {multiplier})",
+        "after_hours_rate_limit": "After hours detected (ET {etHour}:00), applying moderate rate limiting (multiplier: {multiplier})",
+        "weekend_rate_limit": "Weekend detected (ET {etHour}:00), applying relaxed rate limiting (multiplier: {multiplier})",
+        "timezone_adjusted_interval": "Timezone-adjusted interval: {baseInterval}s → {adjustedInterval}s (ET: {easternTime}, Hour: {etHour}, Business: {isBusinessHours}, Weekday: {isWeekday})",
+        "timezone_calculation_failed": "Timezone calculation failed: {error}, using default interval"
     },
     "field_names": {
         "date": "Date",

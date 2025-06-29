@@ -125,7 +125,10 @@
         "center_not_set": "Centre de rendez-vous non défini",
         "server_error": "Erreur serveur ({status}), nouvelle tentative...",
         "auth_failed": "Échec de l'authentification, veuillez vous reconnecter",
-        "current_appointment_info": "Rendez-vous actuel: {appointment}"
+        "current_appointment_info": "Rendez-vous actuel: {appointment}",
+        "soft_ban_detected": "⚠️ Limitation de fréquence détectée (#{banCount}), passage en mode de vérification horaire",
+        "soft_ban_recovered": "✅ Limitation de fréquence levée, retour à la fréquence normale",
+        "soft_ban_no_times": "Aucun horaire disponible pour {date} au centre {center} (limitation de fréquence possible)"
     },
     "log_messages": {
         "i18n_init_complete": "Initialisation de l'internationalisation du script de contenu terminée",
@@ -205,7 +208,17 @@
         "monitoring_can_only_start_on_reschedule": "La surveillance ne peut démarrer que sur la page de reprogrammation",
         "must_select_center_to_start": "Doit sélectionner un centre de rendez-vous pour démarrer la surveillance",
         "set_center_failed": "Échec de la définition du centre de rendez-vous: {error}",
-        "unrecognized_page_generic_navigation": "Type de page non reconnu, tentative de navigation générique"
+        "unrecognized_page_generic_navigation": "Type de page non reconnu, tentative de navigation générique",
+        "business_hours_rate_limit": "Heures d'ouverture détectées (HE {etHour}:00), application d'une limitation conservative (multiplicateur: {multiplier})",
+        "after_hours_rate_limit": "Heures fermées détectées (HE {etHour}:00), application d'une limitation modérée (multiplicateur: {multiplier})",
+        "weekend_rate_limit": "Week-end détecté (HE {etHour}:00), application d'une limitation souple (multiplicateur: {multiplier})",
+        "timezone_adjusted_interval": "Intervalle ajusté par fuseau horaire: {baseInterval}s → {adjustedInterval}s (HE: {easternTime}, Heure: {etHour}, Ouverture: {isBusinessHours}, Jour ouvrable: {isWeekday})",
+        "timezone_calculation_failed": "Échec du calcul de fuseau horaire: {error}, utilisation de l'intervalle par défaut",
+        "soft_ban_detected": "Bannissement souple détecté (tentative #{banCount}), passage en mode d'intervalle étendu",
+        "soft_ban_recovered": "Bannissement souple récupéré, retour à l'intervalle de vérification normal",
+        "soft_ban_interval_applied": "Intervalle de bannissement souple appliqué: {baseInterval}s → {softBanInterval}s (#{banCount}, x{multiplier})",
+        "soft_ban_count_reset": "Compteur de bannissement souple réduit: {newBanCount} (x{newMultiplier})",
+        "next_check_soft_ban": "Prochaine vérification dans {intervalMinutes} minutes (mode bannissement souple #{banCount})"
     },
     "field_names": {
         "date": "Date",
