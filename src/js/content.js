@@ -351,7 +351,7 @@
           toast("toast_messages.form_filled_auto_submit", "success");
 
           // 等待随机延迟后自动提交
-          await randomDelay(3000, 2000); // 3-5秒随机延迟
+          await randomDelay(500, 200); // 0.3-0.7秒随机延迟
 
           // 最后一次验证表单
           if (validateForm()) {
@@ -642,13 +642,43 @@
   }
 
   // 启动监控
+  // 启动监控
   function startMonitoring() {
     if ($checkInterval) return;
+
+    // 只有在reschedule页面才能启动真正的监控
+    if (!isAppointment) {
+      console.error("只能在reschedule页面启动监控");
+      toast("只能在预约页面启动监控", "error");
+      return;
+    }
+
+    // 确保已选择预约中心
+    if (!hasSelectedCenter() && (!$apptCenters || $apptCenters.length === 0)) {
+      console.error("必须选择预约中心才能启动监控");
+      toast("请先选择预约中心", "error");
+      return;
+    }
 
     $active = true;
     toast("notifications.monitoring_started", "success");
 
-    // 立即检查一次
+    // 创建监控上下文，用于页面导航后的状态恢复
+    const monitoringContext = {
+      apptCenters: $apptCenters.length > 0 ? $apptCenters : [$apptCenter],
+      apptCenter: $apptCenter,
+      scheduleId: getScheduleId(),
+      visaType: $visaType,
+      timestamp: Date.now(),
+      startedFromReschedule: true,
+    };
+
+    console.log("创建监控上下文:", monitoringContext);
+
+    // 启动页面监控，确保不离开reschedule页面
+    startPageMonitoring();
+
+    // 立即检查一次（只有在reschedule页面且选择了中心才进行fetch）
     if ($apptCenters.length > 0) {
       checkMultipleCenters($apptCenters, $ascCenter);
     } else if ($apptCenter) {
@@ -659,6 +689,13 @@
     // 设置定期检查
     $checkInterval = setInterval(() => {
       if ($active) {
+        // 再次确认仍在reschedule页面
+        if (!isAppointment) {
+          console.log("不再在reschedule页面，停止监控");
+          stopMonitoring();
+          return;
+        }
+
         // 生成随机间隔
         const randomInterval = getRandomInterval($timer);
         console.log(
@@ -666,7 +703,7 @@
         );
 
         setTimeout(() => {
-          if ($active) {
+          if ($active && isAppointment) {
             if ($apptCenters.length > 0) {
               checkMultipleCenters($apptCenters, $ascCenter);
             } else if ($apptCenter) {
@@ -678,11 +715,104 @@
       }
     }, $timer);
 
-    // 保存状态
+    // 保存状态和监控上下文
     chrome.storage.local.set({
       __active: true,
       __timer: $timer,
+      __monitoringContext: monitoringContext, // 持久化监控上下文
     });
+
+    console.log("监控已启动，监控上下文已保存");
+  }
+
+  // 启动页面监控 - 确保监控期间不离开reschedule页面
+  function startPageMonitoring() {
+    // 监听页面变化事件
+    let pageCheckInterval = setInterval(() => {
+      if (!$active) {
+        clearInterval(pageCheckInterval);
+        return;
+      }
+
+      // 检查当前页面是否还是reschedule页面
+      const currentPath = location.pathname;
+      const currentIsAppointment = !!currentPath.match(
+        /^\/[a-z]{2}-[a-z]{2}\/(n|)iv\/schedule\/\d{1,}\/appointment$/
+      );
+
+      if (!currentIsAppointment) {
+        console.log("检测到离开了reschedule页面，页面路径:", currentPath);
+
+        // 检查是否是确认页面（预约成功）
+        const isConfirmationPage = !!currentPath.match(
+          /^\/[a-z]{2}-[a-z]{2}\/(n|)iv\/schedule\/\d{1,}\/appointment\/instructions$/
+        );
+
+        if (isConfirmationPage) {
+          console.log("到达确认页面，预约可能已成功，停止监控");
+          stopMonitoring();
+          toast("检测到预约确认页面，监控已停止", "success");
+          return;
+        }
+
+        // 检查当前是否有有效的center选择用于监控
+        const hasValidCenterForMonitoring =
+          ($apptCenters && $apptCenters.length > 0) ||
+          ($apptCenter && $apptCenter.trim() !== "");
+
+        if (!hasValidCenterForMonitoring) {
+          console.log("监控期间未检测到有效的center选择，停止监控");
+          stopMonitoring();
+          toast("未选择预约中心，监控已停止", "warning");
+          return;
+        }
+
+        console.log("监控期间有有效的center选择，准备导航回reschedule页面:", {
+          apptCenters: $apptCenters,
+          apptCenter: $apptCenter,
+        });
+
+        // 检查是否退出登录
+        const isLoggedOutPage = !!currentPath.match(
+          /^\/[a-z]{2}-[a-z]{2}\/(n|)iv$/
+        );
+        const isSignInPage = !!currentPath.match(
+          /^\/[a-z]{2}-[a-z]{2}\/(n|)iv\/users\/sign_in/
+        );
+
+        if (isLoggedOutPage || isSignInPage) {
+          console.log("检测到已退出登录，启动重新登录流程");
+          toast("检测到已退出登录，正在重新登录...", "info");
+
+          // 使用监控上下文进行导航，不需要设置额外的导航标志
+          // 监控上下文已经包含了所有必要的信息
+
+          // 重新加载页面开始导航流程
+          setTimeout(() => {
+            location.reload();
+          }, 1000);
+
+          return;
+        }
+
+        // 其他情况，尝试导航回reschedule页面
+        console.log("尝试导航回reschedule页面");
+        toast("正在返回预约页面...", "info");
+
+        // 监控上下文已经包含了恢复监控所需的所有信息
+        // 不需要设置额外的导航标志
+
+        const scheduleId = getScheduleId();
+        if (scheduleId) {
+          const appointmentUrl = `/en-ca/${$visaType}/schedule/${scheduleId}/appointment`;
+          location.href = appointmentUrl;
+        } else {
+          // 如果没有scheduleId，通过仪表板导航
+          const dashboardUrl = currentPath.replace(/schedule.*/, "");
+          location.href = dashboardUrl;
+        }
+      }
+    }, 5000); // 每5秒检查一次页面状态
   }
 
   // 停止监控
@@ -695,7 +825,21 @@
     $active = false;
     toast("notifications.monitoring_stopped", "info");
 
-    chrome.storage.local.set({ __active: false });
+    // 彻底清除所有监控相关状态和标志
+    chrome.storage.local.set({
+      __active: false,
+    });
+
+    // 清除监控上下文和所有导航标志
+    chrome.storage.local.remove([
+      "__monitoringContext",
+      "__navigationFlow",
+      "__targetIsMonitoring",
+      "__selectedCentersForTarget",
+      "__maintainMonitoring",
+    ]);
+
+    console.log("监控已完全停止，所有相关状态已清除");
   }
 
   // 初始化配置
@@ -772,6 +916,9 @@
   async function init() {
     await loadConfiguration();
 
+    // 清理过期的监控上下文
+    await cleanupExpiredMonitoringContext();
+
     console.log("页面初始化 - 当前页面类型:", {
       isLoggedOut,
       isSignIn,
@@ -782,10 +929,125 @@
       currentPath: page,
     });
 
-    // 更新预约信息
+    // 更新预约信息但不开始任何自动操作
     updateAppointmentInfo();
 
-    // 处理不同页面类型
+    // 检查导航流程标记
+    const storage = await chrome.storage.local.get([
+      "__navigationFlow",
+      "__targetIsMonitoring",
+      "__selectedCentersForTarget",
+      "__maintainMonitoring",
+      "__monitoringContext", // 新增：监控上下文
+    ]);
+
+    // 检查是否有活跃的监控状态需要维护
+    // 注意：不再依赖 $active 状态，因为它可能在页面刷新时不准确
+    // 只有在有明确的监控上下文时才恢复监控
+    const shouldMaintainMonitoring = false; // 移除自动维护逻辑
+
+    // 检查是否有持久化的监控上下文
+    const hasMonitoringContext = storage.__monitoringContext;
+
+    console.log("监控状态检查:", {
+      active: $active,
+      apptCenters: $apptCenters,
+      apptCenter: $apptCenter,
+      shouldMaintainMonitoring: shouldMaintainMonitoring,
+      hasMonitoringContext: hasMonitoringContext,
+      currentPage: { isLoggedOut, isSignIn, isDashboard, isAppointment },
+    });
+
+    if (storage.__navigationFlow) {
+      console.log("检测到导航流程标记，开始自动页面处理");
+      await handleNavigationFlow(storage);
+    } else if (hasMonitoringContext && !isAppointment) {
+      // 如果有监控上下文但不在reschedule页面，需要导航回去
+      console.log("检测到监控上下文但不在reschedule页面，启动导航回归");
+
+      const monitoringContext = storage.__monitoringContext;
+      console.log("监控上下文:", monitoringContext);
+
+      // 恢复监控配置
+      if (monitoringContext.apptCenters) {
+        $apptCenters = monitoringContext.apptCenters;
+        $apptCenter = monitoringContext.apptCenters[0];
+      }
+
+      if (isLoggedOut) {
+        console.log("已退出登录，需要重新登录并导航到reschedule页面");
+
+        // 直接重新加载页面，init()会检测到监控上下文并处理导航
+        location.reload();
+        return;
+      } else {
+        // 在美签网站但不在reschedule页面，直接导航
+        console.log("在美签网站但不在reschedule页面，直接导航回reschedule");
+
+        // 导航到reschedule页面
+        toast("正在返回预约页面以恢复监控...", "info");
+        const scheduleId = getScheduleId() || monitoringContext.scheduleId;
+        if (scheduleId) {
+          const appointmentUrl = `/en-ca/${$visaType}/schedule/${scheduleId}/appointment`;
+          location.href = appointmentUrl;
+        } else {
+          // 如果没有scheduleId，重新加载页面让 init() 处理导航
+          location.reload();
+        }
+        return;
+      }
+    } else {
+      console.log("未检测到导航流程标记，等待用户手动操作");
+      // 不进行任何自动操作，只准备环境
+      if (isAppointment) {
+        console.log("在reschedule页面，准备监控环境但不自动开始");
+        await prepareAppointmentPageForMonitoring();
+
+        // 只有在有有效的监控上下文时才恢复监控
+        if (hasMonitoringContext) {
+          const monitoringContext = storage.__monitoringContext;
+          console.log("检测到有效的监控上下文，恢复监控状态");
+
+          // 恢复监控配置
+          if (monitoringContext.apptCenters) {
+            $apptCenters = monitoringContext.apptCenters;
+            $apptCenter = monitoringContext.apptCenters[0];
+          }
+
+          setTimeout(() => {
+            startMonitoring();
+            toast("已恢复监控状态", "success");
+          }, 2000);
+        }
+      }
+
+      // 重要：不自动启动监控，除非有明确的监控上下文
+      // 用户必须手动点击"开始监控"才会触发监控和fetch操作
+      console.log("页面已初始化，等待用户手动开始监控或恢复监控上下文");
+    }
+  }
+
+  // 处理导航流程 - 只有在明确的跳转意图时才执行
+  async function handleNavigationFlow(storage) {
+    const targetIsMonitoring = storage.__targetIsMonitoring;
+    const selectedCentersForTarget = storage.__selectedCentersForTarget;
+    const maintainMonitoring = storage.__maintainMonitoring; // 是否为了维护现有监控
+
+    console.log("导航流程处理:", {
+      targetIsMonitoring,
+      selectedCentersForTarget,
+      maintainMonitoring,
+      currentPageType: {
+        isLoggedOut,
+        isSignIn,
+        isDashboard,
+        isAppointment,
+        isAddressPage,
+        isConfirmation,
+      },
+    });
+
+    // 处理不同页面类型的自动跳转
     if (isLoggedOut) {
       // 在首页，点击登录链接
       toast("检测到首页，寻找登录链接...", "info");
@@ -793,7 +1055,7 @@
         ".homeSelectionsContainer a[href*='/sign_in']"
       );
       if (signInLink) {
-        await delay(1000);
+        await delay(500);
         signInLink.click();
       }
       return;
@@ -807,16 +1069,134 @@
     }
 
     if (isDashboard) {
-      // 处理仪表板页面，选择预约
-      toast("检测到仪表板页面，获取预约信息...", "info");
+      // 处理仪表板页面，跳转到预约页面
+      toast("检测到仪表板页面，跳转到预约页面...", "info");
       await handleDashboardPage();
       return;
     }
 
     if (isAppointment) {
-      // 处理预约页面，这是主要的监控页面
-      toast("检测到预约页面，准备监控...", "info");
-      await handleAppointmentPage();
+      // 到达reschedule页面，这是目标页面
+      toast("已到达reschedule页面", "success");
+
+      // 清除导航流程标记，因为已到达目标页面
+      await chrome.storage.local.remove([
+        "__navigationFlow",
+        "__targetIsMonitoring",
+        "__selectedCentersForTarget",
+        "__maintainMonitoring",
+      ]);
+
+      // 准备监控环境
+      await prepareAppointmentPageForMonitoring();
+
+      // 检查页面中心选择状态
+      const currentlyHasSelectedCenter = hasSelectedCenter();
+      const currentSelectedCenters = getSelectedCenters();
+
+      // 优先使用用户之前配置的中心，而不是页面当前选择的中心
+      const effectiveSelectedCenters =
+        $apptCenters && $apptCenters.length > 0
+          ? $apptCenters
+          : currentSelectedCenters;
+
+      const effectiveHasSelectedCenter = effectiveSelectedCenters.length > 0;
+
+      console.log("检查中心选择状态:", {
+        currentlyHasSelectedCenter,
+        currentSelectedCenters,
+        configuredApptCenters: $apptCenters,
+        effectiveSelectedCenters,
+        effectiveHasSelectedCenter,
+        targetIsMonitoring,
+        selectedCentersForTarget,
+        maintainMonitoring,
+      });
+
+      // 决定下一步操作
+      if (targetIsMonitoring || maintainMonitoring) {
+        if (effectiveHasSelectedCenter) {
+          // 有有效的中心选择（优先使用配置的中心），自动开始监控
+          console.log("有有效的中心选择，自动开始监控");
+          $apptCenters = effectiveSelectedCenters;
+          $apptCenter = effectiveSelectedCenters[0];
+
+          // 如果页面选择与配置不一致，更新页面选择
+          if (
+            currentSelectedCenters.length === 0 ||
+            currentSelectedCenters[0] !== effectiveSelectedCenters[0]
+          ) {
+            const centerSelect = document.getElementById(
+              "appointments_consulate_appointment_facility_id"
+            );
+            if (centerSelect) {
+              console.log(
+                `同步页面选择为配置的中心: ${effectiveSelectedCenters[0]}`
+              );
+              centerSelect.value = effectiveSelectedCenters[0];
+              centerSelect.dispatchEvent(
+                new Event("change", { bubbles: true })
+              );
+            }
+          }
+
+          // 延迟一下再开始监控，确保页面完全加载
+          setTimeout(() => {
+            startMonitoring();
+            if (maintainMonitoring) {
+              toast("已恢复监控状态", "success");
+            } else {
+              toast("自动监控已启动", "success");
+            }
+          }, 3000);
+        } else if (
+          selectedCentersForTarget &&
+          selectedCentersForTarget.length > 0
+        ) {
+          // 页面未选择中心，但用户在popup中已选择，尝试设置并开始监控
+          console.log("页面未选择中心，但用户已选择，尝试设置中心");
+
+          try {
+            const centerSelect = document.getElementById(
+              "appointments_consulate_appointment_facility_id"
+            );
+
+            if (centerSelect) {
+              // 设置第一个选择的中心
+              centerSelect.value = selectedCentersForTarget[0];
+
+              // 触发change事件
+              centerSelect.dispatchEvent(
+                new Event("change", { bubbles: true })
+              );
+
+              $apptCenters = selectedCentersForTarget;
+              $apptCenter = selectedCentersForTarget[0];
+
+              await chrome.storage.local.set({
+                __il: selectedCentersForTarget.join(","),
+              });
+
+              // 延迟开始监控
+              setTimeout(() => {
+                startMonitoring();
+                toast("已设置预约中心并启动监控", "success");
+              }, 3000);
+            } else {
+              toast("无法设置预约中心，请手动选择", "warning");
+            }
+          } catch (error) {
+            console.error("设置预约中心失败:", error);
+            toast("设置预约中心失败，请手动选择", "warning");
+          }
+        } else {
+          // 目标是监控但没选择中心，提示用户
+          toast("请选择预约中心后再开始监控", "warning");
+        }
+      } else {
+        // 目标不是监控，只是导航，提示用户手动操作
+        toast("已到达预约页面，请手动操作", "info");
+      }
       return;
     }
 
@@ -828,24 +1208,20 @@
     }
 
     if (isConfirmation) {
-      // 预约确认页面，等待后跳转
-      toast("检测到确认页面，等待后返回仪表板...", "info");
-      await delay(10000);
-      location.href = page.replace(/schedule.*/, "");
+      // 处理确认页面，返回到预约页面
+      toast("检测到确认页面，返回到预约页面...", "info");
+      await handleConfirmationPage();
       return;
     }
 
-    toast("未识别的页面类型，等待手动操作...", "warning");
+    // 其他页面类型，尝试通用导航
+    console.log("未识别的页面类型，尝试通用导航");
+    await handleGenericNavigation();
   }
 
   // 处理登录页面
   async function handleSignInPage() {
-    if (!$username || !$password) {
-      toast("需要设置用户名和密码", "warning");
-      return;
-    }
-
-    await delay(1000);
+    await delay(500);
 
     const emailField = document.getElementById("user_email");
     const passwordField = document.getElementById("user_password");
@@ -855,9 +1231,54 @@
     );
 
     if (emailField && passwordField && submitBtn) {
-      emailField.value = $username;
-      passwordField.value = $password;
+      // 首先尝试触发浏览器自动填充
+      toast("检查浏览器自动填充...", "info");
 
+      // 模拟用户交互来触发自动填充
+      emailField.focus();
+      emailField.click();
+
+      // 触发input事件，有些浏览器需要这个来启动自动填充
+      emailField.dispatchEvent(new Event("input", { bubbles: true }));
+      emailField.dispatchEvent(new Event("change", { bubbles: true }));
+
+      await delay(500);
+
+      // 切换到密码字段也可能触发自动填充
+      passwordField.focus();
+      passwordField.click();
+      passwordField.dispatchEvent(new Event("input", { bubbles: true }));
+      passwordField.dispatchEvent(new Event("change", { bubbles: true }));
+
+      // 等待更长时间让自动填充完成
+      await delay(500);
+
+      // 检查是否已经自动填充
+      const hasAutoFilled =
+        emailField.value.trim() !== "" && passwordField.value.trim() !== "";
+
+      if (hasAutoFilled) {
+        toast("检测到浏览器自动填充，使用自动填充的凭据", "success");
+        console.log("使用自动填充的凭据:", emailField.value);
+      } else {
+        // 浏览器没有自动填充，使用存储的凭据
+        if (!$username || !$password) {
+          toast("需要设置用户名和密码", "warning");
+          return;
+        }
+
+        toast("浏览器未自动填充，使用存储的凭据", "info");
+        emailField.value = $username;
+        passwordField.value = $password;
+
+        // 触发变化事件，确保表单识别到值的变化
+        emailField.dispatchEvent(new Event("input", { bubbles: true }));
+        emailField.dispatchEvent(new Event("change", { bubbles: true }));
+        passwordField.dispatchEvent(new Event("input", { bubbles: true }));
+        passwordField.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+
+      // 勾选政策确认
       if (policyCheckbox) {
         policyCheckbox.click();
       }
@@ -871,7 +1292,7 @@
 
   // 处理仪表板页面
   async function handleDashboardPage() {
-    await delay(2000);
+    await delay(500);
 
     // 首先获取当前预约信息
     updateAppointmentInfo();
@@ -947,49 +1368,112 @@
   }
 
   // 处理预约页面
-  async function handleAppointmentPage() {
-    await delay(1000);
+  // 处理地址页面
+  async function handleAddressPage() {
+    toast("检测到地址页面，正在跳转到预约页面...", "info");
+    await delay(500);
 
-    // 检查是否需要提交表单
-    const applicantForm = document.querySelector(`form[action*="${page}"]`);
-    if (applicantForm && applicantForm.method.toLowerCase() === "get") {
-      applicantForm.submit();
+    // 从当前URL构建预约页面URL
+    const appointmentUrl = location.pathname.replace(
+      /\/addresses\/[^\/]*$/,
+      "/appointment"
+    );
+    location.href = appointmentUrl;
+  }
+
+  // 处理确认页面
+  async function handleConfirmationPage() {
+    toast("在确认页面，返回到预约页面...", "info");
+    await delay(2000);
+
+    // 从当前URL构建预约页面URL
+    const appointmentUrl = location.pathname.replace(
+      /\/appointment\/.*$/,
+      "/appointment"
+    );
+    location.href = appointmentUrl;
+  }
+
+  // 处理通用导航
+  async function handleGenericNavigation() {
+    toast("尝试导航到预约页面...", "info");
+
+    // 如果有scheduleId，直接构建预约URL
+    const currentScheduleId = getScheduleId();
+    if (currentScheduleId) {
+      const appointmentUrl = `/en-ca/${$visaType}/schedule/${currentScheduleId}/appointment`;
+      location.href = appointmentUrl;
       return;
     }
 
-    // 确保有预约日期时间选择器
-    if (!document.getElementById("consulate_date_time")) {
-      toast("页面加载中，请稍候...", "info");
-      setTimeout(() => handleAppointmentPage(), 2000);
-      return;
+    // 否则尝试回到仪表板
+    const dashboardUrl = location.pathname.replace(/schedule.*/, "");
+    location.href = dashboardUrl;
+  }
+
+  // 准备预约页面用于监控（不自动开始监控）
+  async function prepareAppointmentPageForMonitoring() {
+    await delay(500);
+
+    // 获取并保存当前预约信息
+    updateAppointmentInfo();
+
+    // 获取当前预约日期
+    const currentDateField = document.getElementById(
+      "appointments_consulate_appointment_date"
+    );
+    if (currentDateField && currentDateField.value) {
+      $apptDate = currentDateField.value;
+      await chrome.storage.local.set({ __ad: $apptDate });
     }
 
-    // 获取预约中心选项
-    const centers = getAppointmentCenters();
-    if (centers && centers.length > 0) {
-      toast(`已获取 ${centers.length} 个预约中心选项`, "success");
-    }
+    // 处理预约中心选择 - 不覆盖用户之前的设置
+    const centerSelect = document.getElementById(
+      "appointments_consulate_appointment_facility_id"
+    );
 
-    // 设置预约中心
-    if (!$apptCenter) {
-      const centerSelect = document.getElementById(
-        "appointments_consulate_appointment_facility_id"
-      );
-      if (centerSelect) {
-        $apptCenter = centerSelect.value;
-        await chrome.storage.local.set({ __il: $apptCenter });
+    if (centerSelect) {
+      const pageSelectedCenter = centerSelect.value;
+
+      console.log("页面当前选择的中心:", pageSelectedCenter);
+      console.log("之前配置的中心:", $apptCenter);
+      console.log("之前配置的多中心:", $apptCenters);
+
+      // 如果页面有选择中心，但用户之前没有配置过中心，则保存页面的选择
+      if (pageSelectedCenter && (!$apptCenter || $apptCenter.trim() === "")) {
+        console.log("用户之前未配置中心，保存页面当前选择");
+        $apptCenter = pageSelectedCenter;
+        $apptCenters = [pageSelectedCenter];
+        await chrome.storage.local.set({ __il: pageSelectedCenter });
+      }
+      // 如果用户之前已经配置了中心（特别是多中心），保持用户的配置不变
+      else if ($apptCenter && $apptCenter.trim() !== "") {
+        console.log("保持用户之前的中心配置，不被页面选择覆盖");
+        // 可选：如果用户配置了多中心，设置页面选择为第一个中心
+        if ($apptCenters && $apptCenters.length > 0) {
+          const firstConfiguredCenter = $apptCenters[0];
+          if (centerSelect.value !== firstConfiguredCenter) {
+            console.log(
+              `设置页面选择为用户配置的第一个中心: ${firstConfiguredCenter}`
+            );
+            centerSelect.value = firstConfiguredCenter;
+            centerSelect.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        }
+      }
+      // 如果页面和配置都没有选择，记录状态但不做操作
+      else {
+        console.log("页面和配置都未选择预约中心");
       }
     }
 
-    // 设置ASC中心
-    if (!$ascCenter && document.getElementById("asc-appointment-fields")) {
-      const ascSelect = document.getElementById(
-        "appointments_asc_appointment_facility_id"
-      );
-      if (ascSelect) {
-        $ascCenter = ascSelect.value;
-        await chrome.storage.local.set({ __al: $ascCenter });
-      }
+    // 获取ASC中心（如果有）
+    const ascSelect = document.getElementById(
+      "appointments_asc_appointment_facility_id"
+    );
+    if (ascSelect && ascSelect.value) {
+      $ascCenter = ascSelect.value;
+      await chrome.storage.local.set({ __al: $ascCenter });
     }
 
     // 设置日期范围
@@ -1004,25 +1488,12 @@
       }
     }
 
-    toast(`预约页面已就绪。当前预约日期: ${$apptDate || "未设置"}`, "success");
-
-    // 如果已激活，开始监控
-    if ($active) {
-      startMonitoring();
-    }
-  }
-
-  // 处理地址页面
-  async function handleAddressPage() {
-    toast("检测到地址页面，正在跳转到预约页面...", "info");
-    await delay(1000);
-
-    // 从当前URL构建预约页面URL
-    const appointmentUrl = location.pathname.replace(
-      /\/addresses\/[^\/]*$/,
-      "/appointment"
+    toast(
+      `Reschedule页面已就绪。当前预约日期: ${$apptDate || "未设置"}`,
+      "success"
     );
-    location.href = appointmentUrl;
+    console.log("Reschedule页面准备完成，等待监控指令");
+    console.log("最终中心配置:", { $apptCenter, $apptCenters });
   }
 
   // 获取预约中心选项
@@ -1031,37 +1502,122 @@
       const centerSelect = document.getElementById(
         "appointments_consulate_appointment_facility_id"
       );
+
       if (!centerSelect) {
         console.log("未找到预约中心选择器");
-        return null;
+        return [];
       }
 
       const centers = [];
       const options = centerSelect.querySelectorAll("option");
 
-      options.forEach((option) => {
-        const value = option.value;
-        const text = option.textContent.trim();
-        const isSelected = option.selected;
-
-        if (value && text) {
+      options.forEach((option, index) => {
+        if (option.value && option.value.trim() !== "") {
           centers.push({
-            value: value,
-            text: text,
-            selected: isSelected,
+            value: option.value.trim(),
+            text: option.textContent.trim(),
+            selected: option.selected,
+            index: index,
           });
         }
       });
 
-      console.log("获取到预约中心选项:", centers);
-
-      // 保存到storage供popup使用
-      chrome.storage.local.set({ __centers: centers });
-
+      console.log(`获取到 ${centers.length} 个预约中心选项:`, centers);
       return centers;
     } catch (error) {
       console.error("获取预约中心选项失败:", error);
-      return null;
+      return [];
+    }
+  }
+
+  // 检查是否已选择预约中心（包括配置的中心和页面选择的中心）
+  function hasSelectedCenter() {
+    try {
+      // 首先检查是否有配置的中心
+      if ($apptCenters && $apptCenters.length > 0) {
+        console.log("检测到配置的预约中心:", $apptCenters);
+        return true;
+      }
+
+      if ($apptCenter && $apptCenter.trim() !== "") {
+        console.log("检测到单个配置的预约中心:", $apptCenter);
+        return true;
+      }
+
+      // 然后检查页面是否有选择
+      const centerSelect = document.getElementById(
+        "appointments_consulate_appointment_facility_id"
+      );
+
+      if (!centerSelect) {
+        console.log("未找到预约中心选择器");
+        return false;
+      }
+
+      const hasPageSelection =
+        centerSelect.value && centerSelect.value.trim() !== "";
+      if (hasPageSelection) {
+        console.log("检测到页面选择的预约中心:", centerSelect.value);
+      }
+
+      return hasPageSelection;
+    } catch (error) {
+      console.error("检查预约中心选择状态失败:", error);
+      return false;
+    }
+  }
+
+  // 获取当前选择的预约中心（优先返回配置的中心）
+  function getSelectedCenters() {
+    try {
+      // 首先返回配置的中心
+      if ($apptCenters && $apptCenters.length > 0) {
+        console.log("返回配置的预约中心:", $apptCenters);
+        return $apptCenters;
+      }
+
+      if ($apptCenter && $apptCenter.trim() !== "") {
+        const centers = $apptCenter.includes(",")
+          ? $apptCenter
+              .split(",")
+              .map((c) => c.trim())
+              .filter((c) => c)
+          : [$apptCenter.trim()];
+        console.log("返回单个配置的预约中心:", centers);
+        return centers;
+      }
+
+      // 然后检查页面选择
+      const centerSelect = document.getElementById(
+        "appointments_consulate_appointment_facility_id"
+      );
+
+      if (!centerSelect || !centerSelect.value) {
+        console.log("无配置中心且页面无选择");
+        return [];
+      }
+
+      // 如果是多选模式（虽然目前美签网站是单选）
+      if (centerSelect.multiple) {
+        const selectedOptions = Array.from(centerSelect.selectedOptions);
+        const pageSelection = selectedOptions
+          .map((option) => option.value.trim())
+          .filter((val) => val);
+        console.log("返回页面多选的预约中心:", pageSelection);
+        return pageSelection;
+      } else {
+        // 单选模式
+        const pageSelection = centerSelect.value.trim()
+          ? [centerSelect.value.trim()]
+          : [];
+        if (pageSelection.length > 0) {
+          console.log("返回页面单选的预约中心:", pageSelection);
+        }
+        return pageSelection;
+      }
+    } catch (error) {
+      console.error("获取选择的预约中心失败:", error);
+      return [];
     }
   }
 
@@ -1119,6 +1675,27 @@
       });
     }
 
+    if (request.action === "start_navigation_to_appointment") {
+      // popup.js请求开始导航到预约页面
+      console.log("收到导航到预约页面的请求");
+
+      // 设置导航流程标记（如果还没有设置）
+      chrome.storage.local.set({
+        __navigationFlow: true,
+        __targetIsMonitoring: request.targetIsMonitoring || false,
+        __selectedCentersForTarget: request.selectedCenters || null,
+      });
+
+      // 立即开始导航处理
+      handleNavigationFlow({
+        __navigationFlow: true,
+        __targetIsMonitoring: request.targetIsMonitoring || false,
+        __selectedCentersForTarget: request.selectedCenters || null,
+      });
+
+      return sendResponse({ success: true });
+    }
+
     if (request.action === "get_centers") {
       const centers = getAppointmentCenters();
       return sendResponse({ centers: centers });
@@ -1150,6 +1727,29 @@
 
     sendResponse(true);
   });
+
+  // 清理过期的监控上下文
+  async function cleanupExpiredMonitoringContext() {
+    try {
+      const storage = await chrome.storage.local.get(["__monitoringContext"]);
+      if (storage.__monitoringContext) {
+        const context = storage.__monitoringContext;
+        const now = Date.now();
+        const maxAge = 24 * 60 * 60 * 1000; // 24小时
+
+        // 如果监控上下文超过24小时，清除它
+        if (now - context.timestamp > maxAge) {
+          console.log("监控上下文已过期，清除中...");
+          await chrome.storage.local.remove(["__monitoringContext"]);
+          return true; // 已清除
+        }
+      }
+      return false; // 未清除
+    } catch (error) {
+      console.error("清理监控上下文失败:", error);
+      return false;
+    }
+  }
 
   // 启动初始化
   if (document.readyState === "loading") {

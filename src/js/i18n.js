@@ -132,7 +132,7 @@ class I18n {
 
     // 如果还是没有找到，返回键名
     if (!translation) {
-      console.warn(`翻译缺失: ${key}`);
+      console.log(`翻译缺失: ${key}`);
       return key;
     }
 

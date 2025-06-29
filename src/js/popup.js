@@ -219,11 +219,7 @@ function setupEventListeners() {
       chrome.storage.local.set({ __as: autoSubmit });
 
       // 同时通知content script
-      if (
-        currentTab &&
-        currentTab.url &&
-        currentTab.url.includes("ais.usvisa-info.com")
-      ) {
+      if (currentTab?.url?.includes("ais.usvisa-info.com")) {
         try {
           await chrome.tabs.sendMessage(currentTab.id, {
             action: "set_config",
@@ -422,92 +418,222 @@ function updateUI(status) {
 
 // 切换监控状态
 async function toggleMonitoring() {
-  if (!currentTab) {
-    alert("请先打开美签预约页面");
-    return;
+  if (!isRunning) {
+    // 启动监控流程 - 这里才会触发跳转
+    await startMonitoringFlow();
+  } else {
+    // 停止监控
+    await stopMonitoring();
   }
+}
 
-  // 检查是否在美签网站
-  if (!currentTab.url || !currentTab.url.includes("ais.usvisa-info.com")) {
-    alert("请在美签网站 (ais.usvisa-info.com) 上使用此功能");
-    return;
-  }
-
+// 启动监控流程
+async function startMonitoringFlow() {
   try {
-    if (!isRunning) {
-      // 启动监控
-      const locationSelect = document.getElementById("locationSelect");
-      const selectedOptions = Array.from(locationSelect.selectedOptions);
-      const selectedValues = selectedOptions
-        .map((opt) => opt.value)
-        .filter((val) => val);
-      const intervalMinutes = parseInt(
-        document.getElementById("intervalSelect").value
-      );
+    console.log("=== 开始监控流程 ===");
 
-      if (selectedValues.length === 0) {
-        alert("请选择至少一个预约中心！");
+    // 重新获取当前标签页信息，确保currentTab是最新的
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    currentTab = tab;
+
+    console.log("当前标签页:", currentTab ? currentTab.url : "无标签页");
+
+    // 首先检查是否有保存的账号配置
+    const storage = await chrome.storage.local.get(["__un", "__pw", "__vt"]);
+    console.log("配置检查 - 用户名:", storage.__un ? "已设置" : "未设置");
+    console.log("配置检查 - 密码:", storage.__pw ? "已设置" : "未设置");
+    console.log("配置检查 - 签证类型:", storage.__vt || "未设置");
+
+    if (!storage.__un || !storage.__pw) {
+      console.log("配置不完整，显示配置面板");
+      alert("请先在设置中配置账号信息");
+      showConfig(); // 显示配置面板
+      return;
+    }
+
+    // 获取选择的预约中心
+    const locationSelect = document.getElementById("locationSelect");
+    const selectedOptions = Array.from(locationSelect.selectedOptions);
+    const selectedValues = selectedOptions
+      .map((opt) => opt.value)
+      .filter((val) => val);
+
+    const hasSelectedCenters = selectedValues.length > 0;
+    console.log("选择的预约中心:", selectedValues);
+    console.log("是否选择了中心:", hasSelectedCenters);
+
+    // ===== 新的监控流程逻辑 =====
+    // 1. 首先设置导航流程标记，无论当前在哪个页面都将导航到reschedule页面
+    console.log("设置导航流程标记...");
+    await chrome.storage.local.set({
+      __navigationFlow: true,
+      __targetIsMonitoring: true, // 标记最终目标是监控
+      __selectedCentersForTarget: hasSelectedCenters ? selectedValues : null, // 目标页面需要的中心配置
+    });
+
+    // 2. 检查当前是否在美签网站
+    const isOnVisaSite =
+      currentTab?.url?.includes("ais.usvisa-info.com") ?? false;
+    console.log("是否在美签网站:", isOnVisaSite);
+
+    if (!isOnVisaSite) {
+      // 2a. 不在美签网站，打开登录页面开始完整导航流程
+      console.log("不在美签网站，开始完整导航流程");
+      showNotification("notifications.navigating", "notifications.navigating");
+      await startAutoNavigationFlow(storage.__vt);
+      return;
+    }
+
+    // 2b. 在美签网站上，检查当前页面类型并开始导航
+    try {
+      const response = await chrome.tabs.sendMessage(currentTab.id, {
+        action: "get_status",
+      });
+
+      if (response?.currentPage?.isAppointment) {
+        // 3. 已经在reschedule页面，检查是否选择了中心
+        console.log("已在reschedule页面，检查中心选择状态");
+
+        if (hasSelectedCenters) {
+          // 3a. 在reschedule页面且已选择中心，清除导航标记并开始监控
+          console.log("在reschedule页面且已选择中心，直接开始监控");
+          await chrome.storage.local.remove([
+            "__navigationFlow",
+            "__targetIsMonitoring",
+            "__selectedCentersForTarget",
+          ]);
+          await startRealMonitoring(selectedValues);
+          return;
+        } else {
+          // 3b. 在reschedule页面但没选择中心，清除导航标记并提示用户
+          console.log("在reschedule页面但未选择中心，提示用户选择");
+          await chrome.storage.local.remove([
+            "__navigationFlow",
+            "__targetIsMonitoring",
+            "__selectedCentersForTarget",
+          ]);
+          alert("请选择至少一个预约中心！");
+          return;
+        }
+      } else {
+        // 4. 不在reschedule页面，通知content script开始导航
+        console.log("不在reschedule页面，发送导航指令");
+        showNotification(
+          "notifications.navigating",
+          "notifications.navigating"
+        );
+        await chrome.tabs.sendMessage(currentTab.id, {
+          action: "start_navigation_to_appointment",
+          targetIsMonitoring: true,
+          selectedCenters: hasSelectedCenters ? selectedValues : null,
+        });
         return;
       }
+    } catch (error) {
+      // 5. 无法连接到content script，开始完整导航流程
+      console.log("无法连接到content script，开始完整导航流程");
+      showNotification("notifications.navigating", "notifications.navigating");
+      await startAutoNavigationFlow(storage.__vt);
+      return;
+    }
+  } catch (error) {
+    console.error("启动监控流程失败:", error);
+    alert("操作失败: " + error.message);
+  }
+}
 
-      try {
-        const response = await chrome.tabs.sendMessage(currentTab.id, {
-          action: "start_monitoring",
-          centers: selectedValues, // 发送多个中心
-          interval: intervalMinutes * 60 * 1000,
-        });
+// 开始真正的监控
+async function startRealMonitoring(selectedValues) {
+  try {
+    const intervalMinutes = parseInt(
+      document.getElementById("intervalSelect").value
+    );
 
-        if (response && response.success) {
-          isRunning = true;
-          document.getElementById("status").textContent = "状态：监控中...";
-          document.getElementById("toggleBtn").textContent = "停止监控";
+    const response = await chrome.tabs.sendMessage(currentTab.id, {
+      action: "start_monitoring",
+      centers: selectedValues,
+      interval: intervalMinutes * 60 * 1000,
+    });
 
-          // 显示选中的预约中心名称
-          const selectedTexts = selectedOptions
-            .map((opt) => opt.text)
-            .filter((text) => text !== "请选择预约中心...");
-          document.getElementById("locationDisplay").textContent =
-            selectedTexts.join(", ");
+    if (response?.success) {
+      isRunning = true;
 
-          showNotification(
-            "notifications.monitoring_started",
-            "notifications.monitoring_started"
-          );
-        } else {
-          alert("启动监控失败，请确保在正确的页面");
-        }
-      } catch (msgError) {
-        console.error("发送监控消息失败:", msgError);
-        alert("无法连接到页面，请刷新页面后重试");
-      }
+      // 更新UI
+      const statusText = isI18nReady
+        ? i18n.t("status_messages.monitoring")
+        : "状态：监控中...";
+      const buttonText = isI18nReady
+        ? i18n.t("ui.stop_monitoring")
+        : "停止监控";
+
+      document.getElementById("status").textContent = statusText;
+      document.getElementById("toggleBtn").textContent = buttonText;
+
+      // 显示选中的预约中心名称
+      const mockStatus = {
+        apptCenters: selectedValues,
+        apptCenter: selectedValues.join(","),
+      };
+      updateLocationDisplay(mockStatus);
+
+      showNotification(
+        "notifications.monitoring_started",
+        "notifications.monitoring_started"
+      );
+
+      console.log("监控已启动，选择的中心:", selectedValues);
     } else {
-      // 停止监控
+      alert("启动监控失败，请确保在正确的页面");
+    }
+  } catch (msgError) {
+    console.error("发送监控消息失败:", msgError);
+    alert("无法连接到页面，请刷新页面后重试");
+  }
+}
+
+// 停止监控
+async function stopMonitoring() {
+  try {
+    if (currentTab?.url?.includes("ais.usvisa-info.com")) {
       try {
         const response = await chrome.tabs.sendMessage(currentTab.id, {
           action: "stop_monitoring",
         });
 
-        if (response && response.success) {
-          isRunning = false;
-          document.getElementById("status").textContent = "状态：未启动";
-          document.getElementById("toggleBtn").textContent = "开始监控";
-
-          showNotification(
-            "notifications.monitoring_stopped",
-            "notifications.monitoring_stopped"
-          );
+        if (response?.success) {
+          console.log("监控已通过消息停止");
         }
       } catch (msgError) {
         console.error("发送停止消息失败:", msgError);
         // 即使消息发送失败，也更新UI状态
-        isRunning = false;
-        document.getElementById("status").textContent = "状态：未启动";
-        document.getElementById("toggleBtn").textContent = "开始监控";
       }
     }
+
+    // 更新UI状态
+    isRunning = false;
+    const statusText = isI18nReady
+      ? i18n.t("status_messages.not_started")
+      : "状态：未启动";
+    const buttonText = isI18nReady ? i18n.t("ui.start_monitoring") : "开始监控";
+
+    document.getElementById("status").textContent = statusText;
+    document.getElementById("toggleBtn").textContent = buttonText;
+
+    // 清除自动启动标记
+    await chrome.storage.local.remove([
+      "__autoStartMonitoring",
+      "__selectedCentersForMonitoring",
+    ]);
+
+    showNotification(
+      "notifications.monitoring_stopped",
+      "notifications.monitoring_stopped"
+    );
   } catch (error) {
-    console.error("切换监控状态失败:", error);
-    alert("操作失败: " + error.message);
+    console.error("停止监控失败:", error);
   }
 }
 
@@ -562,15 +688,10 @@ async function saveConfig() {
       __un: username,
       __pw: password,
       __vt: visaType,
-      __autoFlow: true, // 标记需要自动流程
     });
 
     // 尝试发送给content script（如果可用）
-    if (
-      currentTab &&
-      currentTab.url &&
-      currentTab.url.includes("ais.usvisa-info.com")
-    ) {
+    if (currentTab?.url?.includes("ais.usvisa-info.com")) {
       try {
         await chrome.tabs.sendMessage(currentTab.id, {
           action: "set_config",
@@ -584,11 +705,13 @@ async function saveConfig() {
       }
     }
 
-    showNotification("notifications.config_saved", "notifications.navigating");
+    showNotification(
+      "notifications.config_saved",
+      "notifications.config_saved"
+    );
     hideConfig();
 
-    // 启动自动导航流程
-    await startAutoNavigationFlow(visaType);
+    console.log("配置已保存，点击'开始监控'将自动跳转到相应页面");
   } catch (error) {
     console.error("保存配置失败:", error);
     alert("保存配置失败: " + error.message);
@@ -708,11 +831,7 @@ async function resetExtension() {
     try {
       await chrome.storage.local.clear();
 
-      if (
-        currentTab &&
-        currentTab.url &&
-        currentTab.url.includes("ais.usvisa-info.com")
-      ) {
+      if (currentTab?.url?.includes("ais.usvisa-info.com")) {
         try {
           await chrome.tabs.sendMessage(currentTab.id, {
             action: "stop_monitoring",
@@ -763,30 +882,45 @@ async function loadAppointmentCenters(savedCenters, selectedValue) {
 
   let centers = savedCenters;
 
-  // 如果没有保存的中心数据，尝试从当前标签页获取
-  if (
-    !centers &&
-    currentTab &&
-    currentTab.url &&
-    currentTab.url.includes("ais.usvisa-info.com")
-  ) {
+  // 尝试从当前标签页获取
+  if (currentTab?.url?.includes("ais.usvisa-info.com")) {
     try {
       const response = await chrome.tabs.sendMessage(currentTab.id, {
         action: "get_centers",
       });
 
-      if (response && response.centers) {
+      if (response?.centers) {
         centers = response.centers;
         // 保存到storage
         await chrome.storage.local.set({ __centers: centers });
+        console.log("从页面获取并保存预约中心选项:", centers.length);
       }
     } catch (error) {
       console.log("无法从页面获取预约中心选项:", error);
     }
   }
 
+  // 如果仍然没有中心数据，尝试从local storage加载
+  if (!centers) {
+    try {
+      const storage = await chrome.storage.local.get(["__centers"]);
+      if (
+        storage.__centers &&
+        Array.isArray(storage.__centers) &&
+        storage.__centers.length > 0
+      ) {
+        centers = storage.__centers;
+        console.log("从local storage加载预约中心选项:", centers.length);
+      } else if (!centers) {
+        console.log("local storage中无预约中心数据，尝试其他方式获取");
+      }
+    } catch (error) {
+      console.log("从local storage获取预约中心选项失败:", error);
+    }
+  }
+
   // 填充选项
-  if (centers && centers.length > 0) {
+  if (centers?.length > 0) {
     centers.forEach((center) => {
       const option = document.createElement("option");
       option.value = center.value;
@@ -794,7 +928,7 @@ async function loadAppointmentCenters(savedCenters, selectedValue) {
 
       if (selectedValue && selectedValue === center.value) {
         option.selected = true;
-      } else if (selectedValue && selectedValue.includes(",")) {
+      } else if (selectedValue?.includes(",")) {
         // 支持多选时的选中状态
         const selectedValues = selectedValue.split(",");
         if (selectedValues.includes(center.value)) {
@@ -815,22 +949,19 @@ async function loadAppointmentCenters(savedCenters, selectedValue) {
     option.textContent = "请先访问预约页面获取中心选项";
     option.disabled = true;
     locationSelect.appendChild(option);
+    console.log("无预约中心数据，显示提示信息");
   }
 }
 
 // 刷新预约中心选项
 async function refreshAppointmentCenters() {
-  if (
-    currentTab &&
-    currentTab.url &&
-    currentTab.url.includes("ais.usvisa-info.com")
-  ) {
+  if (currentTab?.url?.includes("ais.usvisa-info.com")) {
     try {
       const response = await chrome.tabs.sendMessage(currentTab.id, {
         action: "get_centers",
       });
 
-      if (response && response.centers) {
+      if (response?.centers) {
         const storage = await chrome.storage.local.get(["__il"]);
         await loadAppointmentCenters(response.centers, storage.__il);
         showNotification(
@@ -861,27 +992,53 @@ async function refreshAppointmentCenters() {
 // 启动自动导航流程
 async function startAutoNavigationFlow(visaType) {
   try {
+    console.log("=== 开始自动导航流程 ===");
+    console.log("签证类型:", visaType);
+
     const storage = await chrome.storage.local.get(["__un", "__pw"]);
+    console.log("存储检查 - 用户名:", storage.__un ? "已设置" : "未设置");
+    console.log("存储检查 - 密码:", storage.__pw ? "已设置" : "未设置");
 
     if (!storage.__un || !storage.__pw) {
+      console.log("凭据不完整，显示通知");
       showNotification("alerts.fill_credentials", "alerts.fill_credentials");
       return;
     }
 
+    // 设置导航流程标记
+    console.log("设置导航流程标记...");
+    await chrome.storage.local.set({ __navigationFlow: true });
+    console.log("导航流程标记已设置");
+
     // 根据签证类型构建登录URL
     const loginUrl = `https://ais.usvisa-info.com/en-ca/${visaType}/users/sign_in`;
+    console.log("构建的登录URL:", loginUrl);
 
     showNotification("notifications.navigating", "notifications.navigating");
 
     // 打开登录页面
+    console.log("尝试创建新标签页...");
     chrome.tabs.create({ url: loginUrl }, (tab) => {
+      if (chrome.runtime.lastError) {
+        console.error("创建标签页错误:", chrome.runtime.lastError);
+        return;
+      }
+
       if (tab) {
+        console.log("新标签页创建成功，ID:", tab.id);
+        console.log("新标签页URL:", tab.url);
+
         // 监听标签页更新，跟踪导航流程
         trackNavigationProgress(tab.id, visaType);
+      } else {
+        console.error("创建标签页失败：tab为null");
       }
     });
+
+    console.log("=== 自动导航流程请求完成 ===");
   } catch (error) {
     console.error("自动导航失败:", error);
+    console.error("错误详情:", error.stack);
     showNotification("alerts.operation_failed", "alerts.operation_failed");
   }
 }
@@ -994,7 +1151,7 @@ function getCenterDisplayName(centerValue, locationSelect) {
     (opt) => opt.value === centerValue
   );
 
-  if (option && option.text) {
+  if (option?.text) {
     // 清理显示文本，统一格式
     let displayText = option.text.trim();
 
@@ -1032,7 +1189,7 @@ function updateLocationDisplay(status) {
   const locationSelect = document.getElementById("locationSelect");
   let displayText = "-";
 
-  if (status.apptCenters && status.apptCenters.length > 0) {
+  if (status.apptCenters?.length > 0) {
     // 多中心模式
     const centerNames = status.apptCenters
       .map((centerValue) => getCenterDisplayName(centerValue, locationSelect))
