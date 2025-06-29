@@ -1,14 +1,14 @@
 // 国际化工具类
 class I18n {
   constructor() {
-    this.currentLanguage = "zh-CN"; // 默认简体中文
+    this.currentLanguage = "zh-Hans"; // 默认简体中文
     this.translations = {};
     this.fallbackLanguage = "en";
 
     // 支持的语言列表
     this.supportedLanguages = {
-      "zh-CN": "简体中文",
-      "zh-TW": "繁體中文",
+      "zh-Hans": "简体中文",
+      "zh-Hant": "繁體中文",
       en: "English",
       fr: "Français",
     };
@@ -58,9 +58,9 @@ class I18n {
         browserLang.includes("HK") ||
         browserLang.includes("MO")
       ) {
-        return "zh-TW";
+        return "zh-Hant";
       } else {
-        return "zh-CN";
+        return "zh-Hans";
       }
     }
 

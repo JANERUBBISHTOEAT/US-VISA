@@ -1,0 +1,122 @@
+{
+    "extension_name": "美簽預約監控",
+    "extension_description": "自動監控美國簽證預約時間，發現更早預約時自動通知",
+    "ui": {
+        "title": "🇺🇸 美簽預約監控",
+        "status": "狀態",
+        "start_monitoring": "開始監控",
+        "stop_monitoring": "停止監控",
+        "settings": "設置",
+        "account_settings": "⚙️ 賬號設置",
+        "save": "保存",
+        "cancel": "取消",
+        "reset": "重置",
+        "refresh": "刷新",
+        "language": "語言",
+        "close": "關閉"
+    },
+    "form": {
+        "appointment_center": "預約中心",
+        "appointment_center_multi": "預約中心 (可多選)",
+        "appointment_center_help": "按住 Ctrl/Cmd 鍵可選擇多個中心",
+        "check_interval": "檢查間隔",
+        "auto_submit": "自動提交預約 (高級功能)",
+        "auto_submit_warning": "⚠️ 開啟後發現更早預約時將自動提交表單，請謹慎使用",
+        "visa_type": "簽證類型",
+        "username": "用戶名 (郵箱)",
+        "password": "密碼",
+        "please_select": "請選擇預約中心...",
+        "visit_page_first": "請先訪問預約頁面獲取中心選項"
+    },
+    "intervals": {
+        "1_minute": "1 分鐘",
+        "2_minutes": "2 分鐘",
+        "5_minutes": "5 分鐘",
+        "10_minutes": "10 分鐘"
+    },
+    "visa_types": {
+        "niv": "非移民簽證 (NIV)",
+        "iv": "移民簽證 (IV)"
+    },
+    "status_messages": {
+        "not_started": "未啟動",
+        "monitoring": "監控中...",
+        "waiting": "等待頁面加載...",
+        "not_connected": "未連接",
+        "visit_website": "請先打開美簽網站",
+        "pending": "待啟動"
+    },
+    "page_types": {
+        "unknown": "未知頁面",
+        "login": "登錄頁面",
+        "dashboard": "儀表板",
+        "appointment": "預約頁面",
+        "confirmation": "確認頁面",
+        "address": "地址頁面",
+        "homepage": "首頁"
+    },
+    "info_labels": {
+        "appointment_id": "預約 ID",
+        "location": "地點",
+        "current_appointment": "當前預約",
+        "monitor_status": "監控狀態",
+        "auto_submit_status": "自動提交"
+    },
+    "info_values": {
+        "enabled": "開啟",
+        "disabled": "關閉"
+    },
+    "tips": {
+        "title": "💡 使用提示:",
+        "step1": "1. 首先在設置中配置賬號信息",
+        "step2": "2. 選擇一個或多個預約中心後啟動監控",
+        "step3": "3. 發現更早預約時會自動填寫表單並通知",
+        "step4": "4. 開啟\"自動提交\"後會自動完成預約提交",
+        "refresh_tip": "💡 如未看到預約中心選項，請點擊\"刷新\"按鈕",
+        "simulation_tip": "🚀 多中心監控會隨機間隔檢查，模擬真人操作",
+        "warning_tip": "⚠️ 自動提交功能請謹慎使用，建議先手動測試",
+        "privacy_title": "🔐 隱私說明:",
+        "privacy_info": "賬號信息僅保存在本地，用於自動登錄和預約檢查",
+        "auto_save_info": "💡 輸入信息會自動保存，無需擔心切換標籤頁丟失",
+        "auto_guide_info": "🚀 保存配置後將自動引導完成登錄和預約流程"
+    },
+    "notifications": {
+        "monitoring_started": "監控已啟動",
+        "monitoring_stopped": "監控已停止",
+        "config_saved": "配置已保存",
+        "extension_reset": "擴展已重置",
+        "centers_updated": "預約中心選項已更新",
+        "update_failed": "更新失敗",
+        "found_earlier_appointment": "發現更早預約!",
+        "auto_submitted": "預約已自動提交!",
+        "navigating": "正在自動引導到登錄頁面...",
+        "all_data_cleared": "所有數據已清除"
+    },
+    "alerts": {
+        "select_center": "請選擇至少一個預約中心！",
+        "fill_credentials": "請填寫用戶名和密碼",
+        "use_on_visa_site": "請在美簽網站 (ais.usvisa-info.com) 上使用此功能",
+        "open_appointment_page": "請先打開美簽預約頁面",
+        "confirm_reset": "確定要重置擴展嗎？這將清除所有保存的數據。",
+        "connection_failed": "無法連接到頁面，請刷新頁面後重試",
+        "operation_failed": "操作失敗"
+    },
+    "toast_messages": {
+        "checking_centers": "開始檢查 {count} 個預約中心...",
+        "checking_center": "檢查預約中心 {center} 的可用日期...",
+        "checking_center_failed": "檢查中心 {center} 失敗: {error}",
+        "all_centers_complete": "所有預約中心檢查完成",
+        "found_earlier_date": "🎉 找到更早的預約日期: {date}!",
+        "found_date_not_earlier": "找到日期 {date}，但不早於當前預約 {currentDate}",
+        "no_available_dates": "暫無可用預約日期",
+        "no_dates_in_range": "在指定日期範圍內沒有可用預約",
+        "no_available_times": "日期 {date} 沒有可用時間",
+        "form_filled": "表單已自動填寫，請檢查並提交",
+        "form_filled_auto_submit": "表單已自動填寫，準備自動提交...",
+        "auto_submitting": "正在自動提交預約...",
+        "form_validation_failed": "表單驗證失敗，請手動檢查並提交",
+        "center_not_set": "預約中心未設置",
+        "server_error": "服務器錯誤 ({status})，將重試...",
+        "auth_failed": "認證失敗，請重新登錄"
+    }
+}
