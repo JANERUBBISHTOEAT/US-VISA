@@ -54,20 +54,28 @@ function setupEventListeners() {
   // 预约中心刷新按钮
   document
     .getElementById("refreshCentersBtn")
-    .addEventListener("click", refreshAppointmentCenters);
-
-  // 自动提交开关
+    .addEventListener("click", refreshAppointmentCenters); // 自动提交开关
   document
     .getElementById("autoSubmitToggle")
-    .addEventListener("change", function (e) {
+    .addEventListener("change", async function (e) {
       const autoSubmit = e.target.checked;
       chrome.storage.local.set({ __as: autoSubmit });
 
       // 同时通知content script
-      sendMessageToCurrentTab({
-        action: "set_config",
-        autoSubmit: autoSubmit,
-      });
+      if (
+        currentTab &&
+        currentTab.url &&
+        currentTab.url.includes("ais.usvisa-info.com")
+      ) {
+        try {
+          await chrome.tabs.sendMessage(currentTab.id, {
+            action: "set_config",
+            autoSubmit: autoSubmit,
+          });
+        } catch (error) {
+          console.log("无法发送自动提交设置给content script:", error);
+        }
+      }
 
       console.log("自动提交设置:", autoSubmit ? "已开启" : "已关闭");
     });
