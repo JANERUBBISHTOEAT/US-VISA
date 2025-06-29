@@ -9,7 +9,7 @@
       // 动态加载i18n.js
       if (typeof window.i18n === "undefined") {
         const script = document.createElement("script");
-        script.src = chrome.runtime.getURL("js/i18n.js");
+        script.src = chrome.runtime.getURL("src/js/i18n.js");
         document.head.appendChild(script);
 
         // 等待脚本加载

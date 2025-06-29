@@ -39,7 +39,8 @@
     "web_accessible_resources": [
         {
             "resources": [
-                "locales/*.json"
+                "locales/*.json",
+                "src/js/i18n.js"
             ],
             "matches": [
                 "https://ais.usvisa-info.com/*"
