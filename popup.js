@@ -182,16 +182,31 @@ function updateUI(status) {
     document.getElementById("locationDisplay").textContent =
       centerNames.join(", ");
   } else if (status.apptCenter) {
-    // 单中心模式 - 尝试找到对应的中心名称
+    // 检查是否为逗号分隔的多中心字符串
     const locationSelect = document.getElementById("locationSelect");
-    const option = Array.from(locationSelect.options).find(
-      (opt) => opt.value === status.apptCenter
-    );
-    if (option) {
-      document.getElementById("locationDisplay").textContent = option.text;
-    } else {
+
+    if (status.apptCenter.includes(",")) {
+      // 多中心模式 - 解析逗号分隔的字符串
+      const centerValues = status.apptCenter.split(",").map((v) => v.trim());
+      const centerNames = centerValues.map((centerValue) => {
+        const option = Array.from(locationSelect.options).find(
+          (opt) => opt.value === centerValue
+        );
+        return option ? option.text : centerValue;
+      });
       document.getElementById("locationDisplay").textContent =
-        status.apptCenter;
+        centerNames.join(", ");
+    } else {
+      // 单中心模式
+      const option = Array.from(locationSelect.options).find(
+        (opt) => opt.value === status.apptCenter
+      );
+      if (option) {
+        document.getElementById("locationDisplay").textContent = option.text;
+      } else {
+        document.getElementById("locationDisplay").textContent =
+          status.apptCenter;
+      }
     }
   } else {
     document.getElementById("locationDisplay").textContent = "-";

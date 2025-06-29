@@ -649,9 +649,24 @@
       $visaType = storage.__vt || currentVisaType || "niv";
       $autoSubmit = storage.__as || false;
 
+      // 处理多中心配置
+      if (
+        $apptCenter &&
+        typeof $apptCenter === "string" &&
+        $apptCenter.includes(",")
+      ) {
+        // 如果存储的是逗号分隔的字符串，转换为数组
+        $apptCenters = $apptCenter.split(",").map((center) => center.trim());
+        console.log("检测到多中心配置:", $apptCenters);
+      } else if ($apptCenter) {
+        // 单中心配置
+        $apptCenters = [$apptCenter];
+      }
+
       console.log("配置已加载:", {
         username: $username ? "已设置" : "未设置",
         apptCenter: $apptCenter,
+        apptCenters: $apptCenters,
         apptDate: $apptDate,
         visaType: $visaType,
         active: $active,
