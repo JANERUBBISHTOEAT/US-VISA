@@ -4,6 +4,7 @@
     $password = null,
     $appid = null,
     $apptCenter = null,
+    $apptCenters = [], // 多个预约中心
     $apptDate = null,
     $ascCenter = null,
     $ascReverse = false,
@@ -78,6 +79,53 @@
   if (scheduleId) {
     window.scheduleIdFromPage = scheduleId;
     console.log("Schedule ID (from URL):", scheduleId);
+  }
+
+  // 随机延迟函数 - 模拟人类操作
+  const randomDelay = async (baseMs = 2000, varianceMs = 1000) => {
+    const variance = Math.random() * varianceMs;
+    const totalDelay = baseMs + variance;
+    console.log(`随机延迟: ${Math.round(totalDelay)}ms`);
+    await new Promise((r) => setTimeout(r, totalDelay));
+  };
+
+  // 生成随机检查间隔
+  const getRandomInterval = (baseInterval) => {
+    // 基础间隔 + 随机波动 (±20%)
+    const variance = baseInterval * 0.2;
+    const randomVariance = (Math.random() - 0.5) * 2 * variance;
+    const finalInterval = baseInterval + randomVariance;
+
+    // 确保最小间隔不少于30秒
+    return Math.max(finalInterval, 30000);
+  };
+
+  // 核心预约检查函数 - 支持多中心
+  async function checkMultipleCenters($centers, $ascCenter) {
+    if (!$centers || $centers.length === 0) {
+      toast("未设置预约中心", "error");
+      return;
+    }
+
+    toast(`开始检查 ${$centers.length} 个预约中心...`, "info");
+
+    for (let i = 0; i < $centers.length; i++) {
+      const center = $centers[i];
+
+      try {
+        await getNewDate(0, center, $ascCenter);
+
+        // 在检查不同中心之间添加随机延迟 (2-5秒)
+        if (i < $centers.length - 1) {
+          await randomDelay(2000, 3000);
+        }
+      } catch (error) {
+        console.error(`检查中心 ${center} 时出错:`, error);
+        toast(`检查中心 ${center} 失败: ${error.message}`, "error");
+      }
+    }
+
+    toast("所有预约中心检查完成", "info");
   }
 
   // 核心预约检查函数
@@ -430,13 +478,32 @@
     toast("开始监控预约...", "success");
 
     // 立即检查一次
-    getNewDate(0, $apptCenter, $ascCenter);
+    if ($apptCenters.length > 0) {
+      checkMultipleCenters($apptCenters, $ascCenter);
+    } else if ($apptCenter) {
+      // 兼容单中心模式
+      getNewDate(0, $apptCenter, $ascCenter);
+    }
 
     // 设置定期检查
     $checkInterval = setInterval(() => {
       if ($active) {
-        getNewDate(0, $apptCenter, $ascCenter);
-        updateAppointmentInfo(); // 添加预约信息更新
+        // 生成随机间隔
+        const randomInterval = getRandomInterval($timer);
+        console.log(
+          `下次检查将在 ${Math.round(randomInterval / 1000)} 秒后进行`
+        );
+
+        setTimeout(() => {
+          if ($active) {
+            if ($apptCenters.length > 0) {
+              checkMultipleCenters($apptCenters, $ascCenter);
+            } else if ($apptCenter) {
+              getNewDate(0, $apptCenter, $ascCenter);
+            }
+            updateAppointmentInfo(); // 添加预约信息更新
+          }
+        }, randomInterval - $timer);
       }
     }, $timer);
 
@@ -811,7 +878,16 @@
     }
 
     if (request.action === "start_monitoring") {
-      $apptCenter = request.center;
+      if (request.centers && Array.isArray(request.centers)) {
+        // 多中心模式
+        $apptCenters = request.centers;
+        $apptCenter = request.centers[0]; // 保持兼容性
+      } else if (request.center) {
+        // 单中心模式（兼容）
+        $apptCenter = request.center;
+        $apptCenters = [request.center];
+      }
+
       $timer = request.interval || 60000;
       startMonitoring();
       return sendResponse({ success: true });
@@ -829,6 +905,7 @@
       return sendResponse({
         active: $active,
         apptCenter: $apptCenter,
+        apptCenters: $apptCenters,
         apptDate: $apptDate,
         scheduleId: scheduleId,
         visaType: $visaType,

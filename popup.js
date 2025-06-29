@@ -54,13 +54,21 @@ function setupEventListeners() {
   document
     .getElementById("locationSelect")
     .addEventListener("change", function (e) {
-      const selectedValue = e.target.value;
-      const selectedText = e.target.options[e.target.selectedIndex].text;
+      const selectedOptions = Array.from(e.target.selectedOptions);
+      const selectedValues = selectedOptions
+        .map((opt) => opt.value)
+        .filter((val) => val);
+      const selectedTexts = selectedOptions
+        .map((opt) => opt.text)
+        .filter((text) => text !== "请选择预约中心...");
 
-      if (selectedValue) {
-        // 自动保存选择
-        chrome.storage.local.set({ __il: selectedValue });
-        console.log("已选择预约中心:", selectedText);
+      if (selectedValues.length > 0) {
+        // 自动保存选择（多个值用逗号分隔）
+        chrome.storage.local.set({
+          __il: selectedValues.join(","),
+          __selectedCenters: selectedTexts.join(", "),
+        });
+        console.log("已选择预约中心:", selectedTexts.join(", "));
       }
     });
 
@@ -132,8 +140,19 @@ function updateUI(status) {
     status.scheduleId || "-";
 
   // 显示预约中心信息
-  if (status.apptCenter) {
-    // 尝试找到对应的中心名称
+  if (status.apptCenters && status.apptCenters.length > 0) {
+    // 多中心模式 - 尝试找到对应的中心名称
+    const locationSelect = document.getElementById("locationSelect");
+    const centerNames = status.apptCenters.map((centerValue) => {
+      const option = Array.from(locationSelect.options).find(
+        (opt) => opt.value === centerValue
+      );
+      return option ? option.text : centerValue;
+    });
+    document.getElementById("locationDisplay").textContent =
+      centerNames.join(", ");
+  } else if (status.apptCenter) {
+    // 单中心模式 - 尝试找到对应的中心名称
     const locationSelect = document.getElementById("locationSelect");
     const option = Array.from(locationSelect.options).find(
       (opt) => opt.value === status.apptCenter
@@ -187,20 +206,24 @@ async function toggleMonitoring() {
   try {
     if (!isRunning) {
       // 启动监控
-      const locationValue = document.getElementById("locationSelect").value;
+      const locationSelect = document.getElementById("locationSelect");
+      const selectedOptions = Array.from(locationSelect.selectedOptions);
+      const selectedValues = selectedOptions
+        .map((opt) => opt.value)
+        .filter((val) => val);
       const intervalMinutes = parseInt(
         document.getElementById("intervalSelect").value
       );
 
-      if (!locationValue) {
-        alert("请选择预约中心！");
+      if (selectedValues.length === 0) {
+        alert("请选择至少一个预约中心！");
         return;
       }
 
       try {
         const response = await chrome.tabs.sendMessage(currentTab.id, {
           action: "start_monitoring",
-          center: locationValue,
+          centers: selectedValues, // 发送多个中心
           interval: intervalMinutes * 60 * 1000,
         });
 
@@ -210,15 +233,15 @@ async function toggleMonitoring() {
           document.getElementById("toggleBtn").textContent = "停止监控";
 
           // 显示选中的预约中心名称
-          const locationText =
-            document.getElementById("locationSelect").options[
-              document.getElementById("locationSelect").selectedIndex
-            ].text;
-          document.getElementById("locationDisplay").textContent = locationText;
+          const selectedTexts = selectedOptions
+            .map((opt) => opt.text)
+            .filter((text) => text !== "请选择预约中心...");
+          document.getElementById("locationDisplay").textContent =
+            selectedTexts.join(", ");
 
           showNotification(
             "监控已启动",
-            `正在监控 ${locationText}，检查间隔 ${intervalMinutes} 分钟`
+            `正在监控 ${selectedValues.length} 个中心，检查间隔 ${intervalMinutes} 分钟`
           );
         } else {
           alert("启动监控失败，请确保在正确的页面");
@@ -521,6 +544,12 @@ async function loadAppointmentCenters(savedCenters, selectedValue) {
 
       if (selectedValue && selectedValue === center.value) {
         option.selected = true;
+      } else if (selectedValue && selectedValue.includes(",")) {
+        // 支持多选时的选中状态
+        const selectedValues = selectedValue.split(",");
+        if (selectedValues.includes(center.value)) {
+          option.selected = true;
+        }
       } else if (center.selected) {
         option.selected = true;
       }
