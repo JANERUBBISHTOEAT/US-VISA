@@ -547,7 +547,7 @@ async function startMonitoringFlow() {
         // 3. 已经在reschedule页面，检查是否选择了中心
         console.log("已在reschedule页面，检查中心选择状态");
 
-        if (hasSelectedCenters) {
+        if (hasSelectedCenter) {
           // 3a. 在reschedule页面且已选择中心，清除导航标记并开始监控
           console.log("在reschedule页面且已选择中心，直接开始监控");
           await chrome.storage.local.remove([

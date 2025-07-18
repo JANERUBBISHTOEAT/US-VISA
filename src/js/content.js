@@ -3,9 +3,39 @@
   let i18n = null;
   let isI18nReady = false;
 
+  // 注入必要的CSS样式
+  function injectRequiredStyles() {
+    try {
+      // 检查是否已经注入过样式
+      if (document.getElementById("visa-checker-styles")) {
+        return;
+      }
+
+      // 创建样式元素
+      const style = document.createElement("style");
+      style.id = "visa-checker-styles";
+      style.textContent = `
+        /* 强制显示日期时间选择器 */
+        #consulate_date_time,
+        #asc_date_time {
+          display: block !important;
+        }
+      `;
+
+      // 插入到页面头部
+      document.head.appendChild(style);
+      console.log("[VISA-CHECKER] 样式注入完成");
+    } catch (error) {
+      console.error("[VISA-CHECKER] 样式注入失败:", error);
+    }
+  }
+
   // 初始化国际化
   async function initI18n() {
     try {
+      // 首先注入必要的样式
+      injectRequiredStyles();
+
       // 动态加载i18n.js
       if (typeof window.i18n === "undefined") {
         const script = document.createElement("script");
@@ -537,9 +567,6 @@
             // 等待确认弹窗出现并自动点击确认
             await handleConfirmationDialog();
 
-            // 停止监控，避免重复提交
-            stopMonitoring();
-
             await throwNotification(
               "notifications.auto_submitted",
               "notifications.auto_submitted"
@@ -573,10 +600,7 @@
         );
 
         if (confirmButton) {
-          toast("toast_messages.confirmation_dialog_found", "info");
-          await randomDelay(300, 100); // 短暂延迟模拟人类操作
           confirmButton.click();
-          toast("toast_messages.confirmation_dialog_clicked", "success");
           return true;
         }
 
