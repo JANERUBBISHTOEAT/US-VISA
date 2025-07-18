@@ -114,7 +114,7 @@
         "found_earlier_date": "🎉 找到更早的預約日期: {date}!",
         "found_date_not_earlier": "找到日期 {date}，但不早於當前預約 {currentDate}",
         "no_available_dates": "暫無可用預約日期",
-        "no_dates_in_range": "在指定日期範圍內沒有可用預約",
+        "no_earlier_dates_available": "沒有找到比當前預約更早的日期",
         "no_available_times": "日期 {date} 沒有可用時間",
         "form_filled": "表單已自動填寫，請檢查並提交",
         "form_filled_auto_submit": "表單已自動填寫，準備自動提交...",
@@ -124,6 +124,7 @@
         "server_error": "服務器錯誤 ({status})，將重試...",
         "auth_failed": "認證失敗，請重新登錄",
         "current_appointment_info": "當前預約: {appointment}",
+        "current_earliest_date_info": "找到的最早日期: {date}",
         "soft_ban_detected": "⚠️ 檢測到頻率限制（第#{banCount}次），切換到小時級檢查模式",
         "soft_ban_recovered": "✅ 頻率限制已解除，恢復正常檢查頻率",
         "soft_ban_no_times": "日期 {date} 在中心 {center} 沒有可用時間（可能的頻率限制）"

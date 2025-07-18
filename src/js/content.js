@@ -90,8 +90,6 @@
     $apptDate = null,
     $ascCenter = null,
     $ascReverse = false,
-    $start = null,
-    $end = null,
     $active = false,
     $failed = false,
     $resets = 0,
@@ -111,13 +109,12 @@
 
   const headers = { "x-requested-with": "XMLHttpRequest" };
 
-  // 日期验证函数
-  const dateValidityCheck = (start, end, checkDate) => {
-    if (!start || !end || !checkDate) return true;
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+  // 日期验证函数 - 只检查是否比当前预约日期更早
+  const isEarlierDate = (checkDate, currentApptDate) => {
+    if (!checkDate || !currentApptDate) return false;
     const targetDate = new Date(checkDate);
-    return targetDate >= startDate && targetDate <= endDate;
+    const currentDate = new Date(currentApptDate);
+    return targetDate < currentDate;
   };
 
   // 页面类型检测
@@ -390,14 +387,24 @@
         return;
       }
 
-      // 过滤和排序日期
+      // 过滤和排序日期 - 只保留比当前预约日期更早的日期
       let availableDates = $dates
         .map((d) => d.date)
-        .filter((d) => dateValidityCheck($start, $end, d))
+        .filter((d) => isEarlierDate(d, $apptDate))
         .sort((a, b) => new Date(a) - new Date(b));
 
+      let earliestDate = availableDates[0];
+
       if (availableDates.length === 0) {
-        toast("toast_messages.no_dates_in_range");
+        toast("toast_messages.no_earlier_dates_available");
+        // Toast apptDate and current earliest date from fetch
+        toast("toast_messages.current_appointment_info", "info", {
+          appointment: $apptDate,
+        });
+        toast("toast_messages.current_earliest_date_info", "info", {
+          date: earliestDate,
+        });
+
         return;
       }
 
@@ -1073,8 +1080,6 @@
         "__il",
         "__al",
         "__ar",
-        "__st",
-        "__en",
         "__active",
         "__timer",
         "__it",
@@ -1089,8 +1094,6 @@
       $apptCenter = storage.__il;
       $ascCenter = storage.__al;
       $ascReverse = storage.__ar || false;
-      $start = storage.__st;
-      $end = storage.__en;
       $active = storage.__active || false;
       $timer = storage.__timer ? storage.__timer * 60 * 1000 : 60000; // 将分钟转换为毫秒
       $visaType = storage.__vt || currentVisaType || "niv";
@@ -1676,18 +1679,6 @@
     if (ascSelect && ascSelect.value) {
       $ascCenter = ascSelect.value;
       await chrome.storage.local.set({ __al: $ascCenter });
-    }
-
-    // 设置日期范围
-    if (!$end || !$start) {
-      if (!$end) {
-        $end = $apptDate || new Date().toISOString().split("T")[0];
-        await chrome.storage.local.set({ __en: $end });
-      }
-      if (!$start) {
-        $start = new Date().toISOString().split("T")[0];
-        await chrome.storage.local.set({ __st: $start });
-      }
     }
 
     toast("log_messages.reschedule_page_ready", "success", {

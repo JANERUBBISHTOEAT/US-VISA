@@ -114,7 +114,7 @@
         "found_earlier_date": "🎉 Found earlier appointment date: {date}!",
         "found_date_not_earlier": "Found date {date}, but not earlier than current appointment {currentDate}",
         "no_available_dates": "No available appointment dates",
-        "no_dates_in_range": "No available appointments in specified date range",
+        "no_earlier_dates_available": "No earlier dates available than current appointment",
         "no_available_times": "No available times for date {date}",
         "form_filled": "Form auto-filled, please review and submit",
         "form_filled_auto_submit": "Form auto-filled, preparing auto-submit...",
@@ -124,6 +124,7 @@
         "server_error": "Server error ({status}), will retry...",
         "auth_failed": "Authentication failed, please login again",
         "current_appointment_info": "Current appointment: {appointment}",
+        "current_earliest_date_info": "Earliest date found: {date}",
         "soft_ban_detected": "⚠️ Rate limit detected (#{banCount}), switching to hourly check mode",
         "soft_ban_recovered": "✅ Rate limit lifted, returning to normal frequency",
         "soft_ban_no_times": "No available times for {date} at center {center} (possible rate limit)"

@@ -114,7 +114,7 @@
         "found_earlier_date": "🎉 Date de rendez-vous plus tôt trouvée: {date}!",
         "found_date_not_earlier": "Date trouvée {date}, mais pas plus tôt que le rendez-vous actuel {currentDate}",
         "no_available_dates": "Aucune date de rendez-vous disponible",
-        "no_dates_in_range": "Aucun rendez-vous disponible dans la plage de dates spécifiée",
+        "no_earlier_dates_available": "Aucune date plus tôt que le rendez-vous actuel",
         "no_available_times": "Aucun horaire disponible pour la date {date}",
         "form_filled": "Formulaire auto-rempli, veuillez vérifier et soumettre",
         "form_filled_auto_submit": "Formulaire auto-rempli, préparation de la soumission automatique...",
@@ -124,6 +124,7 @@
         "server_error": "Erreur serveur ({status}), nouvelle tentative...",
         "auth_failed": "Échec de l'authentification, veuillez vous reconnecter",
         "current_appointment_info": "Rendez-vous actuel: {appointment}",
+        "current_earliest_date_info": "Date la plus tôt trouvée: {date}",
         "soft_ban_detected": "⚠️ Limitation de fréquence détectée (#{banCount}), passage en mode de vérification horaire",
         "soft_ban_recovered": "✅ Limitation de fréquence levée, retour à la fréquence normale",
         "soft_ban_no_times": "Aucun horaire disponible pour {date} au centre {center} (limitation de fréquence possible)"

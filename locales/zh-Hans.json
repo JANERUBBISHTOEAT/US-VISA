@@ -114,7 +114,7 @@
         "found_earlier_date": "🎉 找到更早的预约日期: {date}!",
         "found_date_not_earlier": "找到日期 {date}，但不早于当前预约 {currentDate}",
         "no_available_dates": "暂无可用预约日期",
-        "no_dates_in_range": "在指定日期范围内没有可用预约",
+        "no_earlier_dates_available": "没有找到比当前预约更早的日期",
         "no_available_times": "日期 {date} 没有可用时间",
         "form_filled": "表单已自动填写，请检查并提交",
         "form_filled_auto_submit": "表单已自动填写，准备自动提交...",
@@ -124,6 +124,7 @@
         "server_error": "服务器错误 ({status})，将重试...",
         "auth_failed": "认证失败，请重新登录",
         "current_appointment_info": "当前预约: {appointment}",
+        "current_earliest_date_info": "找到的最早日期: {date}",
         "soft_ban_detected": "⚠️ 检测到频率限制（第#{banCount}次），切换到小时级检查模式",
         "soft_ban_recovered": "✅ 频率限制已解除，恢复正常检查频率",
         "soft_ban_no_times": "日期 {date} 在中心 {center} 没有可用时间（可能的频率限制）"
