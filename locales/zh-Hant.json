@@ -29,6 +29,7 @@
         "center": "中心"
     },
     "intervals": {
+        "half_minutes": "30 秒",
         "1_minute": "1 分鐘",
         "2_minutes": "2 分鐘",
         "5_minutes": "5 分鐘",
@@ -82,6 +83,7 @@
     },
     "notifications": {
         "monitoring_started": "監控已啟動",
+        "monitoring_resumed_after_confirmation": "監控已恢復（預約確認後）",
         "monitoring_stopped": "監控已停止",
         "config_saved": "配置已保存",
         "extension_reset": "擴展已重置",
@@ -119,6 +121,8 @@
         "form_filled": "表單已自動填寫，請檢查並提交",
         "form_filled_auto_submit": "表單已自動填寫，準備自動提交...",
         "auto_submitting": "正在自動提交預約...",
+        "confirmation_dialog_found": "發現確認彈窗，準備自動確認...",
+        "confirmation_dialog_clicked": "確認彈窗已點擊",
         "form_validation_failed": "表單驗證失敗，請手動檢查並提交",
         "center_not_set": "預約中心未設置",
         "server_error": "服務器錯誤 ({status})，將重試...",
@@ -192,6 +196,10 @@
         "on_visa_site_but_not_reschedule": "在簽證網站但不在重新預約頁面，直接導航回重新預約",
         "on_reschedule_page_preparing": "在重新預約頁面，準備監控環境但不自動啟動",
         "detected_valid_monitoring_context": "檢測到有效監控上下文，恢復監控狀態",
+        "resuming_monitoring_after_confirmation": "從確認頁面返回，恢復監控狀態",
+        "confirmation_dialog_not_found": "未找到確認彈窗",
+        "confirmation_dialog_error": "處理確認彈窗時出錯: {error}",
+        "confirmation_page_returning_to_appointment": "確認頁面檢測到，正在返回預約頁面",
         "page_initialized_waiting": "頁面已初始化，等待用戶手動啟動監控或恢復監控上下文",
         "navigation_flow_processing": "導航流程處理: 目標監控 {targetIsMonitoring}, 維持監控 {maintainMonitoring}",
         "homepage_detected_finding_login": "檢測到首頁，查找登錄鏈接...",

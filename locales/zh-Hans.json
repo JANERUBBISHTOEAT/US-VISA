@@ -29,6 +29,7 @@
         "center": "中心"
     },
     "intervals": {
+        "half_minutes": "30 秒",
         "1_minute": "1 分钟",
         "2_minutes": "2 分钟",
         "5_minutes": "5 分钟",
@@ -82,6 +83,7 @@
     },
     "notifications": {
         "monitoring_started": "监控已启动",
+        "monitoring_resumed_after_confirmation": "监控已恢复（预约确认后）",
         "monitoring_stopped": "监控已停止",
         "config_saved": "配置已保存",
         "extension_reset": "扩展已重置",
@@ -119,6 +121,8 @@
         "form_filled": "表单已自动填写，请检查并提交",
         "form_filled_auto_submit": "表单已自动填写，准备自动提交...",
         "auto_submitting": "正在自动提交预约...",
+        "confirmation_dialog_found": "发现确认弹窗，准备自动确认...",
+        "confirmation_dialog_clicked": "确认弹窗已点击",
         "form_validation_failed": "表单验证失败，请手动检查并提交",
         "center_not_set": "预约中心未设置",
         "server_error": "服务器错误 ({status})，将重试...",
@@ -192,6 +196,10 @@
         "on_visa_site_but_not_reschedule": "在签证网站但不在重新预约页面，直接导航回重新预约",
         "on_reschedule_page_preparing": "在重新预约页面，准备监控环境但不自动启动",
         "detected_valid_monitoring_context": "检测到有效监控上下文，恢复监控状态",
+        "resuming_monitoring_after_confirmation": "从确认页面返回，恢复监控状态",
+        "confirmation_dialog_not_found": "未找到确认弹窗",
+        "confirmation_dialog_error": "处理确认弹窗时出错: {error}",
+        "confirmation_page_returning_to_appointment": "确认页面检测到，正在返回预约页面",
         "page_initialized_waiting": "页面已初始化，等待用户手动启动监控或恢复监控上下文",
         "navigation_flow_processing": "导航流程处理: 目标监控 {targetIsMonitoring}, 维持监控 {maintainMonitoring}",
         "homepage_detected_finding_login": "检测到首页，查找登录链接...",

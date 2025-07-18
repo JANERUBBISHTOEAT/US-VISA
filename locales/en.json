@@ -29,6 +29,7 @@
         "center": "Center"
     },
     "intervals": {
+        "half_minutes": "30 Seconds",
         "1_minute": "1 Minute",
         "2_minutes": "2 Minutes",
         "5_minutes": "5 Minutes",
@@ -82,6 +83,7 @@
     },
     "notifications": {
         "monitoring_started": "Monitoring Started",
+        "monitoring_resumed_after_confirmation": "Monitoring Resumed (After Confirmation)",
         "monitoring_stopped": "Monitoring Stopped",
         "config_saved": "Configuration Saved",
         "extension_reset": "Extension Reset",
@@ -119,6 +121,8 @@
         "form_filled": "Form auto-filled, please review and submit",
         "form_filled_auto_submit": "Form auto-filled, preparing auto-submit...",
         "auto_submitting": "Auto-submitting appointment...",
+        "confirmation_dialog_found": "Confirmation dialog found, preparing auto-confirm...",
+        "confirmation_dialog_clicked": "Confirmation dialog clicked",
         "form_validation_failed": "Form validation failed, please check and submit manually",
         "center_not_set": "Appointment center not set",
         "server_error": "Server error ({status}), will retry...",
@@ -192,6 +196,10 @@
         "on_visa_site_but_not_reschedule": "On visa site but not on reschedule page, navigating back to reschedule directly",
         "on_reschedule_page_preparing": "On reschedule page, preparing monitoring environment but not auto-starting",
         "detected_valid_monitoring_context": "Detected valid monitoring context, restoring monitoring state",
+        "resuming_monitoring_after_confirmation": "Returning from confirmation page, resuming monitoring",
+        "confirmation_dialog_not_found": "Confirmation dialog not found",
+        "confirmation_dialog_error": "Error handling confirmation dialog: {error}",
+        "confirmation_page_returning_to_appointment": "Confirmation page detected, returning to appointment page",
         "page_initialized_waiting": "Page initialized, waiting for user to manually start monitoring or restore monitoring context",
         "navigation_flow_processing": "Navigation flow processing: target monitoring {targetIsMonitoring}, maintain monitoring {maintainMonitoring}",
         "homepage_detected_finding_login": "Detected homepage, finding login link...",

@@ -534,6 +534,9 @@
             toast("toast_messages.auto_submitting", "info");
             submitBtn.click();
 
+            // 等待确认弹窗出现并自动点击确认
+            await handleConfirmationDialog();
+
             // 停止监控，避免重复提交
             stopMonitoring();
 
@@ -552,6 +555,43 @@
     } catch (error) {
       logI18n("toast_messages.form_validation_failed", "error");
       toast("toast_messages.form_validation_failed", "error");
+    }
+  }
+
+  // 处理确认弹窗
+  async function handleConfirmationDialog() {
+    try {
+      // 等待确认弹窗出现
+      let maxWaitTime = 10000; // 最多等待10秒
+      let waitTime = 0;
+      const checkInterval = 200; // 每200毫秒检查一次
+
+      while (waitTime < maxWaitTime) {
+        // 查找确认弹窗中的确认按钮
+        const confirmButton = document.querySelector(
+          "div[data-confirm-footer] a.button.alert, div[data-confirm-footer] a.button:not(.secondary)"
+        );
+
+        if (confirmButton) {
+          toast("toast_messages.confirmation_dialog_found", "info");
+          await randomDelay(300, 100); // 短暂延迟模拟人类操作
+          confirmButton.click();
+          toast("toast_messages.confirmation_dialog_clicked", "success");
+          return true;
+        }
+
+        await delay(checkInterval);
+        waitTime += checkInterval;
+      }
+
+      // 如果没有找到确认弹窗，记录日志但不抛出错误
+      logI18n("log_messages.confirmation_dialog_not_found", "warning");
+      return false;
+    } catch (error) {
+      logI18n("log_messages.confirmation_dialog_error", "error", {
+        error: error.message,
+      });
+      return false;
     }
   }
 
@@ -1237,10 +1277,32 @@
             $apptCenter = monitoringContext.apptCenter;
           }
 
-          setTimeout(() => {
-            startMonitoring();
-            toast("notifications.monitoring_started", "success");
-          }, 2000);
+          // 检查是否是从确认页面跳转回来的，需要恢复监控
+          if (monitoringContext.shouldResumeMonitoring) {
+            logI18n(
+              "log_messages.resuming_monitoring_after_confirmation",
+              "info"
+            );
+
+            // 清除shouldResumeMonitoring标记，避免重复恢复
+            monitoringContext.shouldResumeMonitoring = false;
+            await chrome.storage.local.set({
+              __monitoringContext: monitoringContext,
+            });
+
+            setTimeout(() => {
+              startMonitoring();
+              toast(
+                "notifications.monitoring_resumed_after_confirmation",
+                "success"
+              );
+            }, 3000); // 稍微延长等待时间，确保页面完全加载
+          } else {
+            setTimeout(() => {
+              startMonitoring();
+              toast("notifications.monitoring_started", "success");
+            }, 2000);
+          }
         }
       }
 
@@ -1592,6 +1654,24 @@
   // 处理确认页面
   async function handleConfirmationPage() {
     toast("log_messages.confirmation_page_detected", "info");
+
+    // 保存监控上下文，以便在跳转回预约页面后继续监控
+    const monitoringContext = {
+      apptCenter: $apptCenter,
+      apptDate: $apptDate,
+      timer: $timer,
+      autoSubmit: $autoSubmit,
+      visaType: $visaType,
+      timestamp: Date.now(),
+      shouldResumeMonitoring: true, // 标记需要恢复监控
+    };
+
+    await chrome.storage.local.set({
+      __monitoringContext: monitoringContext,
+      __maintainMonitoring: true, // 维护监控状态
+    });
+
+    toast("log_messages.confirmation_page_returning_to_appointment", "info");
     await delay(2000);
 
     // 从当前URL构建预约页面URL

@@ -29,6 +29,7 @@
         "center": "Centre"
     },
     "intervals": {
+        "half_minutes": "30 Secondes",
         "1_minute": "1 Minute",
         "2_minutes": "2 Minutes",
         "5_minutes": "5 Minutes",
@@ -82,6 +83,7 @@
     },
     "notifications": {
         "monitoring_started": "Surveillance Démarrée",
+        "monitoring_resumed_after_confirmation": "Surveillance Reprise (Après Confirmation)",
         "monitoring_stopped": "Surveillance Arrêtée",
         "config_saved": "Configuration Enregistrée",
         "extension_reset": "Extension Réinitialisée",
@@ -119,6 +121,8 @@
         "form_filled": "Formulaire auto-rempli, veuillez vérifier et soumettre",
         "form_filled_auto_submit": "Formulaire auto-rempli, préparation de la soumission automatique...",
         "auto_submitting": "Soumission automatique du rendez-vous...",
+        "confirmation_dialog_found": "Dialogue de confirmation trouvé, préparation de la confirmation automatique...",
+        "confirmation_dialog_clicked": "Dialogue de confirmation cliqué",
         "form_validation_failed": "Échec de la validation du formulaire, veuillez vérifier et soumettre manuellement",
         "center_not_set": "Centre de rendez-vous non défini",
         "server_error": "Erreur serveur ({status}), nouvelle tentative...",
@@ -192,6 +196,10 @@
         "on_visa_site_but_not_reschedule": "Sur le site de visa mais pas sur la page de reprogrammation, navigation directe de retour à la reprogrammation",
         "on_reschedule_page_preparing": "Sur la page de reprogrammation, préparation de l'environnement de surveillance mais pas de démarrage automatique",
         "detected_valid_monitoring_context": "Contexte de surveillance valide détecté, restauration de l'état de surveillance",
+        "resuming_monitoring_after_confirmation": "Retour de la page de confirmation, reprise de la surveillance",
+        "confirmation_dialog_not_found": "Dialogue de confirmation non trouvé",
+        "confirmation_dialog_error": "Erreur lors du traitement du dialogue de confirmation: {error}",
+        "confirmation_page_returning_to_appointment": "Page de confirmation détectée, retour à la page de rendez-vous",
         "page_initialized_waiting": "Page initialisée, en attente que l'utilisateur démarre manuellement la surveillance ou restaure le contexte de surveillance",
         "navigation_flow_processing": "Traitement du flux de navigation: surveillance cible {targetIsMonitoring}, maintien surveillance {maintainMonitoring}",
         "homepage_detected_finding_login": "Page d'accueil détectée, recherche du lien de connexion...",

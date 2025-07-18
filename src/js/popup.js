@@ -3,6 +3,7 @@ let currentTab = null;
 
 // 国际化相关变量
 let isI18nReady = false;
+let isInitialLoadComplete = false; // 标记初始加载是否完成
 
 // 初始化页面
 document.addEventListener("DOMContentLoaded", async () => {
@@ -11,6 +12,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadDefaultSettings();
   setupEventListeners();
   await refreshAppointmentCenters();
+
+  // 标记初始加载完成，现在可以开始自动保存
+  isInitialLoadComplete = true;
+  console.log("初始加载完成，启用自动保存功能");
 });
 
 // 初始化国际化
@@ -90,8 +95,19 @@ function updateSelectOptions() {
     const options = intervalSelect.querySelectorAll("option");
     options.forEach((option) => {
       const value = option.value;
-      const key = `intervals.${value}_minute${value === "1" ? "" : "s"}`;
-      option.textContent = i18n.t(key);
+      // 构建正确的键名，处理包含点号的值
+      let key;
+      if (value === "0.5") {
+        key = "intervals.half_minutes";
+      } else if (value === "1") {
+        key = "intervals.1_minute";
+      } else {
+        key = `intervals.${value}_minutes`;
+      }
+
+      // 使用方括号语法安全地获取翻译
+      const translatedText = i18n.t(key);
+      option.textContent = translatedText;
     });
   }
 
@@ -244,8 +260,21 @@ function setupEventListeners() {
   document
     .getElementById("intervalSelect")
     .addEventListener("change", async function (e) {
-      const intervalMinutes = parseInt(e.target.value);
+      const intervalMinutes = parseFloat(e.target.value);
       await chrome.storage.local.set({ __timer: intervalMinutes });
+
+      // 同时通知content script
+      if (currentTab?.url?.includes("ais.usvisa-info.com")) {
+        try {
+          await chrome.tabs.sendMessage(currentTab.id, {
+            action: "set_config",
+            interval: intervalMinutes * 60 * 1000, // 转换为毫秒
+          });
+        } catch (error) {
+          console.log("无法发送间隔设置给content script:", error);
+        }
+      }
+
       console.log("检查间隔设置:", intervalMinutes + " 分钟");
     });
 
@@ -573,7 +602,7 @@ async function startMonitoringFlow() {
 // 开始真正的监控
 async function startRealMonitoring(selectedValues) {
   try {
-    const intervalMinutes = parseInt(
+    const intervalMinutes = parseFloat(
       document.getElementById("intervalSelect").value
     );
 
@@ -687,6 +716,10 @@ function hideConfig() {
 // 加载保存的配置
 async function loadSavedConfig() {
   try {
+    // 临时禁用自动保存，防止加载过程中触发保存
+    const wasInitialLoadComplete = isInitialLoadComplete;
+    isInitialLoadComplete = false;
+
     const storage = await chrome.storage.local.get(["__un", "__pw", "__vt"]);
 
     if (storage.__un) {
@@ -698,8 +731,15 @@ async function loadSavedConfig() {
     if (storage.__vt) {
       document.getElementById("visaTypeSelect").value = storage.__vt;
     }
+
+    // 恢复自动保存状态
+    setTimeout(() => {
+      isInitialLoadComplete = wasInitialLoadComplete;
+    }, 100); // 短暂延迟，确保所有值都已设置完毕
   } catch (error) {
     console.error("加载配置失败:", error);
+    // 即使出错也要恢复自动保存状态
+    isInitialLoadComplete = true;
   }
 }
 
@@ -792,21 +832,48 @@ function debounce(func, wait) {
 // 自动保存配置
 async function autoSaveConfig() {
   try {
+    // 防止在初始加载期间触发保存
+    if (!isInitialLoadComplete) {
+      console.log("初始加载中，跳过自动保存");
+      return;
+    }
+
     const username = document.getElementById("usernameInput").value.trim();
     const password = document.getElementById("passwordInput").value.trim();
     const visaType = document.getElementById("visaTypeSelect").value;
-    const intervalMinutes = parseInt(
+    const intervalMinutes = parseFloat(
       document.getElementById("intervalSelect").value
     );
 
-    await chrome.storage.local.set({
-      __un: username,
-      __pw: password,
-      __vt: visaType,
-      __timer: intervalMinutes,
-    });
+    // 获取当前存储的数据，避免空值覆盖已保存的数据
+    const currentStorage = await chrome.storage.local.get([
+      "__un",
+      "__pw",
+      "__vt",
+      "__timer",
+    ]);
 
-    console.log("配置已自动保存");
+    const updateData = {};
+
+    // 只有当新值不为空时才更新，避免空值覆盖已保存的数据
+    if (username || !currentStorage.__un) {
+      updateData.__un = username;
+    }
+    if (password || !currentStorage.__pw) {
+      updateData.__pw = password;
+    }
+    if (visaType || !currentStorage.__vt) {
+      updateData.__vt = visaType;
+    }
+    if (!isNaN(intervalMinutes) && intervalMinutes > 0) {
+      updateData.__timer = intervalMinutes;
+    }
+
+    // 只有当有数据需要更新时才执行保存
+    if (Object.keys(updateData).length > 0) {
+      await chrome.storage.local.set(updateData);
+      console.log("配置已自动保存:", updateData);
+    }
   } catch (error) {
     console.error("自动保存失败:", error);
   }
