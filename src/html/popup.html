@@ -22,11 +22,11 @@
       <h3 data-i18n="ui.title">🇺🇸 美签预约监控</h3>
 
       <div class="form-group">
-        <label for="locationSelect" data-i18n="form.appointment_center_multi"
-          >预约中心 (可多选)</label
+        <label for="locationSelect" data-i18n="form.appointment_center"
+          >预约中心</label
         >
         <div class="input-row">
-          <select id="locationSelect" multiple size="4">
+          <select id="locationSelect">
             <option value="" data-i18n="form.please_select">
               请选择预约中心...
             </option>
@@ -39,9 +39,6 @@
             刷新
           </button>
         </div>
-        <small class="help-text" data-i18n="form.appointment_center_help"
-          >按住 Ctrl/Cmd 键可选择多个中心</small
-        >
       </div>
 
       <div class="form-group">
@@ -131,17 +128,13 @@
       <div class="tips">
         <strong data-i18n="tips.title">💡 使用提示:</strong><br />
         <span data-i18n="tips.step1">1. 首先在设置中配置账号信息</span><br />
-        <span data-i18n="tips.step2">2. 选择一个或多个预约中心后启动监控</span
-        ><br />
+        <span data-i18n="tips.step2">2. 选择一个预约中心后启动监控</span><br />
         <span data-i18n="tips.step3">3. 发现更早预约时会自动填写表单并通知</span
         ><br />
         <span data-i18n="tips.step4">4. 开启"自动提交"后会自动完成预约提交</span
         ><br />
         <span data-i18n="tips.refresh_tip"
           >💡 如未看到预约中心选项，请点击"刷新"按钮</span
-        ><br />
-        <span data-i18n="tips.simulation_tip"
-          >🚀 多中心监控会随机间隔检查，模拟真人操作</span
         ><br />
         <span data-i18n="tips.warning_tip"
           >⚠️ 自动提交功能请谨慎使用，建议先手动测试</span

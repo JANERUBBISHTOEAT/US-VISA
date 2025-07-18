@@ -87,7 +87,6 @@
     $password = null,
     $appid = null,
     $apptCenter = null,
-    $apptCenters = [], // 多个预约中心
     $apptDate = null,
     $ascCenter = null,
     $ascReverse = false,
@@ -357,38 +356,6 @@
   };
 
   // 核心预约检查函数 - 支持多中心
-  async function checkMultipleCenters($centers, $ascCenter) {
-    if (!$centers || $centers.length === 0) {
-      toast("toast_messages.center_not_set", "error");
-      return;
-    }
-
-    toast("toast_messages.checking_centers", "info", {
-      count: $centers.length,
-    });
-
-    for (let i = 0; i < $centers.length; i++) {
-      const center = $centers[i];
-
-      try {
-        toast("toast_messages.checking_center", "info", { center: center });
-        await getNewDate(0, center, $ascCenter);
-
-        // 在检查不同中心之间添加随机延迟 (2-5秒)
-        if (i < $centers.length - 1) {
-          await randomDelay(2000, 3000);
-        }
-      } catch (error) {
-        logI18n("toast_messages.checking_center_failed", "error", {
-          center: center,
-          error: error.message,
-        });
-      }
-    }
-
-    toast("toast_messages.all_centers_complete", "info");
-  }
-
   // 核心预约检查函数
   async function getNewDate($delay, $center, $ascCenter) {
     try {
@@ -884,7 +851,7 @@
     }
 
     // 确保已选择预约中心
-    if (!hasSelectedCenter() && (!$apptCenters || $apptCenters.length === 0)) {
+    if (!hasSelectedCenter() && !$apptCenter) {
       logI18n("log_messages.must_select_center_to_start", "error");
       toast("alerts.select_center", "error");
       return;
@@ -896,7 +863,6 @@
 
     // 创建监控上下文，用于页面导航后的状态恢复
     const monitoringContext = {
-      apptCenters: $apptCenters.length > 0 ? $apptCenters : [$apptCenter],
       apptCenter: $apptCenter,
       scheduleId: getScheduleId(),
       visaType: $visaType,
@@ -918,10 +884,7 @@
     startPageMonitoring();
 
     // 立即检查一次（只有在reschedule页面且选择了中心才进行fetch）
-    if ($apptCenters.length > 0) {
-      checkMultipleCenters($apptCenters, $ascCenter);
-    } else if ($apptCenter) {
-      // 兼容单中心模式
+    if ($apptCenter) {
       getNewDate(0, $apptCenter, $ascCenter);
     }
 
@@ -954,9 +917,7 @@
 
         setTimeout(() => {
           if ($active && isAppointment) {
-            if ($apptCenters.length > 0) {
-              checkMultipleCenters($apptCenters, $ascCenter);
-            } else if ($apptCenter) {
+            if ($apptCenter) {
               getNewDate(0, $apptCenter, $ascCenter);
             }
             updateAppointmentInfo(); // 添加预约信息更新
@@ -1012,8 +973,7 @@
 
         // 检查当前是否有有效的center选择用于监控
         const hasValidCenterForMonitoring =
-          ($apptCenters && $apptCenters.length > 0) ||
-          ($apptCenter && $apptCenter.trim() !== "");
+          $apptCenter && $apptCenter.trim() !== "";
 
         if (!hasValidCenterForMonitoring) {
           logI18n("log_messages.no_valid_center_during_monitoring", "warning");
@@ -1144,20 +1104,12 @@
         $originalTimer = storage.__softBanState.originalTimer || $timer;
       }
 
-      // 如果存储的是逗号分隔的字符串，转换为数组
-      if (
-        $apptCenter &&
-        typeof $apptCenter === "string" &&
-        $apptCenter.includes(",")
-      ) {
-        // 如果存储的是逗号分隔的字符串，转换为数组
-        $apptCenters = $apptCenter.split(",").map((center) => center.trim());
-        logI18n("log_messages.detected_configured_centers", "info", {
-          centers: $apptCenters,
-        });
-      } else if ($apptCenter) {
+      // 处理预约中心配置
+      if ($apptCenter) {
         // 单中心配置
-        $apptCenters = [$apptCenter];
+        logI18n("log_messages.detected_configured_center", "info", {
+          center: $apptCenter,
+        });
       }
 
       logI18n("log_messages.config_loaded", "info", {
@@ -1218,7 +1170,7 @@
 
     logI18n("log_messages.monitoring_context_check", "info", {
       active: $active,
-      apptCenters: $apptCenters,
+      apptCenter: $apptCenter,
       shouldMaintainMonitoring: shouldMaintainMonitoring,
       hasMonitoringContext: hasMonitoringContext,
     });
@@ -1239,9 +1191,8 @@
       });
 
       // 恢复监控配置
-      if (monitoringContext.apptCenters) {
-        $apptCenters = monitoringContext.apptCenters;
-        $apptCenter = monitoringContext.apptCenters[0];
+      if (monitoringContext.apptCenter) {
+        $apptCenter = monitoringContext.apptCenter;
       }
 
       if (isLoggedOut) {
@@ -1279,9 +1230,8 @@
           logI18n("log_messages.detected_valid_monitoring_context", "info");
 
           // 恢复监控配置
-          if (monitoringContext.apptCenters) {
-            $apptCenters = monitoringContext.apptCenters;
-            $apptCenter = monitoringContext.apptCenters[0];
+          if (monitoringContext.apptCenter) {
+            $apptCenter = monitoringContext.apptCenter;
           }
 
           setTimeout(() => {
@@ -1356,12 +1306,8 @@
       const currentSelectedCenters = getSelectedCenters();
 
       // 优先使用用户之前配置的中心，而不是页面当前选择的中心
-      const effectiveSelectedCenters =
-        $apptCenters && $apptCenters.length > 0
-          ? $apptCenters
-          : currentSelectedCenters;
-
-      const effectiveHasSelectedCenter = effectiveSelectedCenters.length > 0;
+      const effectiveSelectedCenter = $apptCenter || currentSelectedCenters[0];
+      const effectiveHasSelectedCenter = !!effectiveSelectedCenter;
 
       logI18n("log_messages.checking_center_selection_status", "info");
 
@@ -1370,22 +1316,21 @@
         if (effectiveHasSelectedCenter) {
           // 有有效的中心选择（优先使用配置的中心），自动开始监控
           logI18n("log_messages.valid_center_selection_auto_start", "info");
-          $apptCenters = effectiveSelectedCenters;
-          $apptCenter = effectiveSelectedCenters[0];
+          $apptCenter = effectiveSelectedCenter;
 
           // 如果页面选择与配置不一致，更新页面选择
           if (
             currentSelectedCenters.length === 0 ||
-            currentSelectedCenters[0] !== effectiveSelectedCenters[0]
+            currentSelectedCenters[0] !== effectiveSelectedCenter
           ) {
             const centerSelect = document.getElementById(
               "appointments_consulate_appointment_facility_id"
             );
             if (centerSelect) {
               logI18n("log_messages.sync_page_selection", "info", {
-                firstConfiguredCenter: effectiveSelectedCenters[0],
+                firstConfiguredCenter: effectiveSelectedCenter,
               });
-              centerSelect.value = effectiveSelectedCenters[0];
+              centerSelect.value = effectiveSelectedCenter;
               centerSelect.dispatchEvent(
                 new Event("change", { bubbles: true })
               );
@@ -1422,11 +1367,10 @@
                 new Event("change", { bubbles: true })
               );
 
-              $apptCenters = selectedCentersForTarget;
               $apptCenter = selectedCentersForTarget[0];
 
               await chrome.storage.local.set({
-                __il: selectedCentersForTarget.join(","),
+                __il: selectedCentersForTarget[0],
               });
 
               // 延迟开始监控
@@ -1629,7 +1573,6 @@
     }
   }
 
-  // 处理预约页面
   // 处理地址页面
   async function handleAddressPage() {
     toast("log_messages.address_page_detected", "info");
@@ -1700,29 +1643,24 @@
       logI18n("log_messages.center_config_priority", "info", {
         pageSelectedCenter,
         apptCenter: $apptCenter,
-        apptCenters: $apptCenters,
       });
 
       // 如果页面有选择中心，但用户之前没有配置过中心，则保存页面的选择
       if (pageSelectedCenter && (!$apptCenter || $apptCenter.trim() === "")) {
         logI18n("log_messages.save_page_selection", "info");
         $apptCenter = pageSelectedCenter;
-        $apptCenters = [pageSelectedCenter];
         await chrome.storage.local.set({ __il: pageSelectedCenter });
       }
-      // 如果用户之前已经配置了中心（特别是多中心），保持用户的配置不变
+      // 如果用户之前已经配置了中心，保持用户的配置不变
       else if ($apptCenter && $apptCenter.trim() !== "") {
         logI18n("log_messages.keep_user_config", "info");
-        // 可选：如果用户配置了多中心，设置页面选择为第一个中心
-        if ($apptCenters && $apptCenters.length > 0) {
-          const firstConfiguredCenter = $apptCenters[0];
-          if (centerSelect.value !== firstConfiguredCenter) {
-            logI18n("log_messages.set_page_to_first_configured", "info", {
-              firstConfiguredCenter,
-            });
-            centerSelect.value = firstConfiguredCenter;
-            centerSelect.dispatchEvent(new Event("change", { bubbles: true }));
-          }
+        // 设置页面选择为配置的中心
+        if (centerSelect.value !== $apptCenter) {
+          logI18n("log_messages.set_page_to_configured", "info", {
+            configuredCenter: $apptCenter,
+          });
+          centerSelect.value = $apptCenter;
+          centerSelect.dispatchEvent(new Event("change", { bubbles: true }));
         }
       }
       // 如果页面和配置都没有选择，记录状态但不做操作
@@ -1762,7 +1700,6 @@
     logI18n("log_messages.page_preparation_complete", "info");
     logI18n("log_messages.final_center_config", "info", {
       apptCenter: $apptCenter,
-      apptCenters: $apptCenters,
     });
   }
 
@@ -1804,15 +1741,8 @@
   function hasSelectedCenter() {
     try {
       // 首先检查是否有配置的中心
-      if ($apptCenters && $apptCenters.length > 0) {
-        logI18n("log_messages.detected_configured_centers", "info", {
-          centers: $apptCenters,
-        });
-        return true;
-      }
-
       if ($apptCenter && $apptCenter.trim() !== "") {
-        logI18n("log_messages.detected_single_configured_center", "info", {
+        logI18n("log_messages.detected_configured_center", "info", {
           center: $apptCenter,
         });
         return true;
@@ -1847,20 +1777,9 @@
   function getSelectedCenters() {
     try {
       // 首先返回配置的中心
-      if ($apptCenters && $apptCenters.length > 0) {
-        console.log("返回配置的预约中心:", $apptCenters);
-        return $apptCenters;
-      }
-
       if ($apptCenter && $apptCenter.trim() !== "") {
-        const centers = $apptCenter.includes(",")
-          ? $apptCenter
-              .split(",")
-              .map((c) => c.trim())
-              .filter((c) => c)
-          : [$apptCenter.trim()];
-        console.log("返回单个配置的预约中心:", centers);
-        return centers;
+        console.log("返回配置的预约中心:", $apptCenter);
+        return [$apptCenter];
       }
 
       // 然后检查页面选择
@@ -1908,14 +1827,9 @@
     }
 
     if (request.action === "start_monitoring") {
-      if (request.centers && Array.isArray(request.centers)) {
-        // 多中心模式
-        $apptCenters = request.centers;
-        $apptCenter = request.centers[0]; // 保持兼容性
-      } else if (request.center) {
-        // 单中心模式（兼容）
+      if (request.center) {
+        // 单中心模式
         $apptCenter = request.center;
-        $apptCenters = [request.center];
       }
 
       $timer = request.interval || 60000;
@@ -1935,7 +1849,6 @@
       return sendResponse({
         active: $active,
         apptCenter: $apptCenter,
-        apptCenters: $apptCenters,
         apptDate: $apptDate,
         scheduleId: scheduleId,
         visaType: $visaType,

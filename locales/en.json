@@ -17,8 +17,7 @@
     },
     "form": {
         "appointment_center": "Appointment Center",
-        "appointment_center_multi": "Appointment Centers (Multi-select)",
-        "appointment_center_help": "Hold Ctrl/Cmd to select multiple centers",
+        "appointment_center_help": "Select one appointment center",
         "check_interval": "Check Interval",
         "auto_submit": "Auto Submit Appointment (Advanced)",
         "auto_submit_warning": "⚠️ When enabled, the form will be automatically submitted when an earlier appointment is found. Use with caution",
@@ -71,11 +70,10 @@
     "tips": {
         "title": "💡 Usage Tips:",
         "step1": "1. First configure account info in settings",
-        "step2": "2. Select one or more appointment centers and start monitoring",
+        "step2": "2. Select one appointment center and start monitoring",
         "step3": "3. When earlier appointment is found, form will be auto-filled and you'll be notified",
         "step4": "4. Enable \"Auto Submit\" to automatically complete appointment submission",
         "refresh_tip": "💡 If you don't see appointment center options, click \"Refresh\" button",
-        "simulation_tip": "🚀 Multi-center monitoring uses random intervals to simulate human behavior",
         "warning_tip": "⚠️ Use auto-submit feature carefully, test manually first",
         "privacy_title": "🔐 Privacy Notice:",
         "privacy_info": "Account information is stored locally only, used for auto-login and appointment checking",

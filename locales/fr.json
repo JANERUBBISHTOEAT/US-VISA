@@ -17,8 +17,7 @@
     },
     "form": {
         "appointment_center": "Centre de Rendez-vous",
-        "appointment_center_multi": "Centres de Rendez-vous (Multi-sélection)",
-        "appointment_center_help": "Maintenez Ctrl/Cmd pour sélectionner plusieurs centres",
+        "appointment_center_help": "Sélectionnez un centre de rendez-vous",
         "check_interval": "Intervalle de Vérification",
         "auto_submit": "Soumission Automatique (Avancé)",
         "auto_submit_warning": "⚠️ Quand activé, le formulaire sera automatiquement soumis quand un rendez-vous plus tôt est trouvé. Utilisez avec prudence",
@@ -71,11 +70,10 @@
     "tips": {
         "title": "💡 Conseils d'Utilisation:",
         "step1": "1. Configurez d'abord les informations de compte dans les paramètres",
-        "step2": "2. Sélectionnez un ou plusieurs centres de rendez-vous et démarrez la surveillance",
+        "step2": "2. Sélectionnez un centre de rendez-vous et démarrez la surveillance",
         "step3": "3. Quand un rendez-vous plus tôt est trouvé, le formulaire sera auto-rempli et vous serez notifié",
         "step4": "4. Activez \"Soumission Auto\" pour compléter automatiquement la soumission du rendez-vous",
         "refresh_tip": "💡 Si vous ne voyez pas les options de centre de rendez-vous, cliquez sur \"Actualiser\"",
-        "simulation_tip": "🚀 La surveillance multi-centres utilise des intervalles aléatoires pour simuler le comportement humain",
         "warning_tip": "⚠️ Utilisez la fonction de soumission automatique avec prudence, testez manuellement d'abord",
         "privacy_title": "🔐 Avis de Confidentialité:",
         "privacy_info": "Les informations de compte sont stockées localement uniquement, utilisées pour la connexion automatique et la vérification des rendez-vous",

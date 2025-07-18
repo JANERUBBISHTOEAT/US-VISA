@@ -251,17 +251,20 @@ function setupEventListeners() {
         );
 
       if (selectedValues.length > 0) {
-        // 自动保存选择（多个值用逗号分隔）
+        // 只允许选择一个中心
+        const selectedValue = selectedValues[0];
+        const selectedText = selectedTexts[0];
+
+        // 自动保存选择
         chrome.storage.local.set({
-          __il: selectedValues.join(","),
-          __selectedCenters: selectedTexts.join(", "),
+          __il: selectedValue,
+          __selectedCenters: selectedText,
         });
-        console.log("已选择预约中心:", selectedTexts.join(", "));
+        console.log("已选择预约中心:", selectedText);
 
         // 立即更新地点显示
         const mockStatus = {
-          apptCenter: selectedValues.join(","),
-          apptCenters: selectedValues,
+          apptCenter: selectedValue,
         };
         updateLocationDisplay(mockStatus);
       }
@@ -462,14 +465,11 @@ async function startMonitoringFlow() {
 
     // 获取选择的预约中心
     const locationSelect = document.getElementById("locationSelect");
-    const selectedOptions = Array.from(locationSelect.selectedOptions);
-    const selectedValues = selectedOptions
-      .map((opt) => opt.value)
-      .filter((val) => val);
+    const selectedValue = locationSelect.value;
 
-    const hasSelectedCenters = selectedValues.length > 0;
-    console.log("选择的预约中心:", selectedValues);
-    console.log("是否选择了中心:", hasSelectedCenters);
+    const hasSelectedCenter = selectedValue && selectedValue.trim() !== "";
+    console.log("选择的预约中心:", selectedValue);
+    console.log("是否选择了中心:", hasSelectedCenter);
 
     // ===== 新的监控流程逻辑 =====
     // 1. 首先设置导航流程标记，无论当前在哪个页面都将导航到reschedule页面
@@ -477,7 +477,7 @@ async function startMonitoringFlow() {
     await chrome.storage.local.set({
       __navigationFlow: true,
       __targetIsMonitoring: true, // 标记最终目标是监控
-      __selectedCentersForTarget: hasSelectedCenters ? selectedValues : null, // 目标页面需要的中心配置
+      __selectedCentersForTarget: hasSelectedCenter ? [selectedValue] : null, // 目标页面需要的中心配置
     });
 
     // 2. 检查当前是否在美签网站
@@ -511,7 +511,7 @@ async function startMonitoringFlow() {
             "__targetIsMonitoring",
             "__selectedCentersForTarget",
           ]);
-          await startRealMonitoring(selectedValues);
+          await startRealMonitoring([selectedValue]);
           return;
         } else {
           // 3b. 在reschedule页面但没选择中心，清除导航标记并提示用户
@@ -538,7 +538,7 @@ async function startMonitoringFlow() {
         await chrome.tabs.sendMessage(currentTab.id, {
           action: "start_navigation_to_appointment",
           targetIsMonitoring: true,
-          selectedCenters: hasSelectedCenters ? selectedValues : null,
+          selectedCenters: hasSelectedCenter ? [selectedValue] : null,
         });
         return;
       }
@@ -564,7 +564,7 @@ async function startRealMonitoring(selectedValues) {
 
     const response = await chrome.tabs.sendMessage(currentTab.id, {
       action: "start_monitoring",
-      centers: selectedValues,
+      center: selectedValues[0],
       interval: intervalMinutes * 60 * 1000,
     });
 
@@ -584,8 +584,7 @@ async function startRealMonitoring(selectedValues) {
 
       // 显示选中的预约中心名称
       const mockStatus = {
-        apptCenters: selectedValues,
-        apptCenter: selectedValues.join(","),
+        apptCenter: selectedValues[0],
       };
       updateLocationDisplay(mockStatus);
 
@@ -594,7 +593,7 @@ async function startRealMonitoring(selectedValues) {
         "notifications.monitoring_started"
       );
 
-      console.log("监控已启动，选择的中心:", selectedValues);
+      console.log("监控已启动，选择的中心:", selectedValues[0]);
     } else {
       alert(
         isI18nReady
@@ -695,14 +694,14 @@ async function saveConfig() {
   const password = document.getElementById("passwordInput").value.trim();
   const visaType = document.getElementById("visaTypeSelect").value;
 
-  if (!username || !password) {
-    alert(
-      isI18nReady
-        ? i18n.t("alerts.fill_username_password")
-        : "请填写用户名和密码"
-    );
-    return;
-  }
+  // if (!username || !password) {
+  //   alert(
+  //     isI18nReady
+  //       ? i18n.t("alerts.fill_username_password")
+  //       : "请填写用户名和密码"
+  //   );
+  //   return;
+  // }
 
   try {
     // 保存到storage
@@ -988,12 +987,9 @@ async function loadAppointmentCenters(savedCenters, selectedValue) {
 
       if (selectedValue && selectedValue === center.value) {
         option.selected = true;
-      } else if (selectedValue?.includes(",")) {
-        // 支持多选时的选中状态
-        const selectedValues = selectedValue.split(",");
-        if (selectedValues.includes(center.value)) {
-          option.selected = true;
-        }
+      } else if (selectedValue === center.value) {
+        // 单选模式：如果值匹配则选中
+        option.selected = true;
       } else if (center.selected) {
         option.selected = true;
       }
@@ -1178,7 +1174,6 @@ async function loadBasicInfoFromStorage() {
     // 更新地点显示
     const mockStatus = {
       apptCenter: storage.__il,
-      apptCenters: storage.__al,
     };
     updateLocationDisplay(mockStatus);
 
@@ -1259,35 +1254,11 @@ function updateLocationDisplay(status) {
   const locationSelect = document.getElementById("locationSelect");
   let displayText = "-";
 
-  if (status.apptCenters?.length > 0) {
-    // 多中心模式
-    const centerNames = status.apptCenters
-      .map((centerValue) => getCenterDisplayName(centerValue, locationSelect))
-      .filter((name) => name); // 过滤空值
-
-    if (centerNames.length > 0) {
-      displayText = centerNames.join(", ");
-    }
-  } else if (status.apptCenter) {
-    // 检查是否为逗号分隔的多中心字符串
-    if (status.apptCenter.includes(",")) {
-      const centerValues = status.apptCenter.split(",").map((v) => v.trim());
-      const centerNames = centerValues
-        .map((centerValue) => getCenterDisplayName(centerValue, locationSelect))
-        .filter((name) => name);
-
-      if (centerNames.length > 0) {
-        displayText = centerNames.join(", ");
-      }
-    } else {
-      // 单中心模式
-      const centerName = getCenterDisplayName(
-        status.apptCenter,
-        locationSelect
-      );
-      if (centerName) {
-        displayText = centerName;
-      }
+  if (status.apptCenter) {
+    // 单中心模式
+    const centerName = getCenterDisplayName(status.apptCenter, locationSelect);
+    if (centerName) {
+      displayText = centerName;
     }
   }
 

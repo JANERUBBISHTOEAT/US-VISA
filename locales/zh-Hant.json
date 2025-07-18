@@ -17,8 +17,7 @@
     },
     "form": {
         "appointment_center": "預約中心",
-        "appointment_center_multi": "預約中心 (可多選)",
-        "appointment_center_help": "按住 Ctrl/Cmd 鍵可選擇多個中心",
+        "appointment_center_help": "選擇一個預約中心",
         "check_interval": "檢查間隔",
         "auto_submit": "自動提交預約 (高級功能)",
         "auto_submit_warning": "⚠️ 開啟後發現更早預約時將自動提交表單，請謹慎使用",
@@ -71,11 +70,10 @@
     "tips": {
         "title": "💡 使用提示:",
         "step1": "1. 首先在設置中配置賬號信息",
-        "step2": "2. 選擇一個或多個預約中心後啟動監控",
+        "step2": "2. 選擇一個預約中心後啟動監控",
         "step3": "3. 發現更早預約時會自動填寫表單並通知",
         "step4": "4. 開啟\"自動提交\"後會自動完成預約提交",
         "refresh_tip": "💡 如未看到預約中心選項，請點擊\"刷新\"按鈕",
-        "simulation_tip": "🚀 多中心監控會隨機間隔檢查，模擬真人操作",
         "warning_tip": "⚠️ 自動提交功能請謹慎使用，建議先手動測試",
         "privacy_title": "🔐 隱私說明:",
         "privacy_info": "賬號信息僅保存在本地，用於自動登錄和預約檢查",

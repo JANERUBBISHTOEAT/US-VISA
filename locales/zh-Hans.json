@@ -17,8 +17,7 @@
     },
     "form": {
         "appointment_center": "预约中心",
-        "appointment_center_multi": "预约中心 (可多选)",
-        "appointment_center_help": "按住 Ctrl/Cmd 键可选择多个中心",
+        "appointment_center_help": "选择一个预约中心",
         "check_interval": "检查间隔",
         "auto_submit": "自动提交预约 (高级功能)",
         "auto_submit_warning": "⚠️ 开启后发现更早预约时将自动提交表单，请谨慎使用",
@@ -71,11 +70,10 @@
     "tips": {
         "title": "💡 使用提示:",
         "step1": "1. 首先在设置中配置账号信息",
-        "step2": "2. 选择一个或多个预约中心后启动监控",
+        "step2": "2. 选择一个预约中心后启动监控",
         "step3": "3. 发现更早预约时会自动填写表单并通知",
         "step4": "4. 开启\"自动提交\"后会自动完成预约提交",
         "refresh_tip": "💡 如未看到预约中心选项，请点击\"刷新\"按钮",
-        "simulation_tip": "🚀 多中心监控会随机间隔检查，模拟真人操作",
         "warning_tip": "⚠️ 自动提交功能请谨慎使用，建议先手动测试",
         "privacy_title": "🔐 隐私说明:",
         "privacy_info": "账号信息仅保存在本地，用于自动登录和预约检查",
