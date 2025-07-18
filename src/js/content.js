@@ -929,7 +929,7 @@
     // 保存状态和监控上下文
     chrome.storage.local.set({
       __active: true,
-      __timer: $timer,
+      __timer: Math.round($timer / 60 / 1000), // 将毫秒转换为分钟保存
       __monitoringContext: monitoringContext, // 持久化监控上下文
       __softBanState: {
         isSoftBanned: $isSoftBanned,
@@ -1092,7 +1092,7 @@
       $start = storage.__st;
       $end = storage.__en;
       $active = storage.__active || false;
-      $timer = storage.__timer || 60000;
+      $timer = storage.__timer ? storage.__timer * 60 * 1000 : 60000; // 将分钟转换为毫秒
       $visaType = storage.__vt || currentVisaType || "niv";
       $autoSubmit = storage.__as || false;
 
@@ -1833,6 +1833,10 @@
       }
 
       $timer = request.interval || 60000;
+      // 保存间隔设置（转换为分钟）
+      chrome.storage.local.set({
+        __timer: Math.round($timer / 60 / 1000),
+      });
       startMonitoring();
       return sendResponse({ success: true });
     }

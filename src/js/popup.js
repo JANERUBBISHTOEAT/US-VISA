@@ -163,10 +163,16 @@ async function loadDefaultSettings() {
       "__vt",
       "__centers",
       "__as", // 自动提交设置
+      "__timer", // 检查间隔设置
     ]);
 
     if (storage.__vt) {
       document.getElementById("visaTypeSelect").value = storage.__vt;
+    }
+
+    // 加载检查间隔设置
+    if (storage.__timer) {
+      document.getElementById("intervalSelect").value = storage.__timer;
     }
 
     // 加载自动提交设置
@@ -232,6 +238,15 @@ function setupEventListeners() {
 
       // 立即更新状态显示
       await loadCurrentStatus();
+    });
+
+  // 检查间隔选择变化事件
+  document
+    .getElementById("intervalSelect")
+    .addEventListener("change", async function (e) {
+      const intervalMinutes = parseInt(e.target.value);
+      await chrome.storage.local.set({ __timer: intervalMinutes });
+      console.log("检查间隔设置:", intervalMinutes + " 分钟");
     });
 
   // 预约中心选择变化事件
@@ -745,7 +760,12 @@ async function saveConfig() {
 
 // 设置自动保存功能
 function setupAutoSave() {
-  const inputs = ["usernameInput", "passwordInput", "visaTypeSelect"];
+  const inputs = [
+    "usernameInput",
+    "passwordInput",
+    "visaTypeSelect",
+    "intervalSelect",
+  ];
 
   inputs.forEach((inputId) => {
     const input = document.getElementById(inputId);
@@ -775,11 +795,15 @@ async function autoSaveConfig() {
     const username = document.getElementById("usernameInput").value.trim();
     const password = document.getElementById("passwordInput").value.trim();
     const visaType = document.getElementById("visaTypeSelect").value;
+    const intervalMinutes = parseInt(
+      document.getElementById("intervalSelect").value
+    );
 
     await chrome.storage.local.set({
       __un: username,
       __pw: password,
       __vt: visaType,
+      __timer: intervalMinutes,
     });
 
     console.log("配置已自动保存");
