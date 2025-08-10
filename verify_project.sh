@@ -1,11 +1,12 @@
 #!/bin/bash
 
+# Resolve the script's directory and change to it so the script can run from any location
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # US-VISA Chrome Extension - Final Verification Script
 echo "🔍 US-VISA Chrome Extension - Final Verification"
 echo "================================================="
-
-# Change to project directory
-cd "/Users/pod_0x000d/Documents/GitHub/US-VISA"
 
 echo ""
 echo "📁 Project Structure Check..."
