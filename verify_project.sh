@@ -69,6 +69,42 @@ else
 fi
 
 echo ""
+echo "🔍 Locale Key Consistency..."
+if ! python3 <<'PY'
+import json, glob, sys, os
+
+
+def flatten(d, prefix=''):
+    for k, v in d.items():
+        if isinstance(v, dict):
+            yield from flatten(v, prefix + k + '.')
+        else:
+            yield prefix + k
+
+
+files = glob.glob('locales/*.json')
+keysets = {}
+for f in files:
+    with open(f, encoding='utf-8') as fh:
+        data = json.load(fh)
+    keysets[os.path.basename(f)] = set(flatten(data))
+
+all_keys = set().union(*keysets.values())
+missing = {name: all_keys - ks for name, ks in keysets.items() if all_keys - ks}
+
+if missing:
+    print("❌ Missing translation keys:")
+    for name, miss in missing.items():
+        print(f"   {name} is missing keys: {sorted(miss)}")
+    sys.exit(1)
+else:
+    print("✅ All locale files contain identical key sets")
+PY
+then
+    exit 1
+fi
+
+echo ""
 echo "🔍 Key Feature Verification..."
 
 # Check for specific soft ban keys in all languages
