@@ -1,6 +1,6 @@
 # US-VISA
 
-## URLS
+## URLs
 
 - <https://ais.usvisa-info.com/en-ca/niv/schedule/xxx/appointment>
 
