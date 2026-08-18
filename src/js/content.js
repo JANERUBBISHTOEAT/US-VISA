@@ -200,6 +200,21 @@
     logI18n("log_messages.schedule_id_from_url", "info", { scheduleId });
   }
 
+  // 获取基础路径（例如 /en-ca/niv）
+  const getBasePath = () => page.split("/").slice(0, 3).join("/");
+
+  // 导航到登录页面
+  const navigateToLogin = () => {
+    const basePath = getBasePath();
+    location.href = `${basePath}/users/sign_in`;
+  };
+
+  // 导航到重新预约页面
+  const navigateToAppointment = (sid) => {
+    const basePath = getBasePath();
+    location.href = `${basePath}/schedule/${sid}/appointment`;
+  };
+
   // 随机延迟函数 - 模拟人类操作
   const randomDelay = async (baseMs = 2000, varianceMs = 1000) => {
     const variance = Math.random() * varianceMs;
@@ -512,10 +527,15 @@
       logI18n("toast_messages.auth_failed", "error");
       toast("toast_messages.auth_failed", "error");
 
-      // 如果是认证错误，停止检查
+      // 如果是认证错误，跳转到登录界面
       if (error.message.includes("401") || error.message.includes("403")) {
-        stopMonitoring();
-        toast("toast_messages.auth_failed", "error");
+        if ($checkInterval) {
+          clearInterval($checkInterval);
+          $checkInterval = null;
+        }
+        $active = false;
+        navigateToLogin();
+        return;
       }
     }
   }
@@ -932,6 +952,13 @@
     $originalTimer = $timer; // 保存原始间隔
     toast("notifications.monitoring_started", "success");
 
+    // 记住监控状态以便页面切换后恢复
+    try {
+      window.localStorage.setItem("visaMonitoringActive", "1");
+    } catch (e) {
+      console.warn("localStorage not available", e);
+    }
+
     // 创建监控上下文，用于页面导航后的状态恢复
     const monitoringContext = {
       apptCenter: $apptCenter,
@@ -1067,14 +1094,12 @@
           logI18n("log_messages.logout_detected_relogin", "info");
           toast("toast_messages.auth_failed", "info");
 
-          // 使用监控上下文进行导航，不需要设置额外的导航标志
-          // 监控上下文已经包含了所有必要的信息
-
-          // 重新加载页面开始导航流程
-          setTimeout(() => {
-            location.reload();
-          }, 1000);
-
+          if ($checkInterval) {
+            clearInterval($checkInterval);
+            $checkInterval = null;
+          }
+          $active = false;
+          navigateToLogin();
           return;
         }
 
@@ -1107,6 +1132,13 @@
 
     $active = false;
     toast("notifications.monitoring_stopped", "info");
+
+    // 移除持久化的监控状态
+    try {
+      window.localStorage.removeItem("visaMonitoringActive");
+    } catch (e) {
+      console.warn("localStorage not available", e);
+    }
 
     // 彻底清除所有监控相关状态和标志
     chrome.storage.local.set({
@@ -1214,6 +1246,38 @@
     await cleanupExpiredMonitoringContext();
 
     logI18n("log_messages.page_init", "info");
+
+    const monitoringActive =
+      window.localStorage.getItem("visaMonitoringActive") === "1";
+
+    if (monitoringActive) {
+      const stored = await chrome.storage.local.get(["__monitoringContext"]);
+      const ctx = stored.__monitoringContext || {};
+      const sid = getScheduleId() || ctx.scheduleId;
+
+      if (isConfirmation) {
+        await handleConfirmationPage();
+        return;
+      }
+
+      if (isLoggedOut || isSignIn) {
+        navigateToLogin();
+        return;
+      }
+
+      if (isAppointment) {
+        await prepareAppointmentPageForMonitoring();
+        startMonitoring();
+        return;
+      }
+
+      if (sid) {
+        navigateToAppointment(sid);
+      } else {
+        navigateToLogin();
+      }
+      return;
+    }
 
     // 更新预约信息但不开始任何自动操作
     updateAppointmentInfo();
